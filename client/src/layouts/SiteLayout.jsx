@@ -1,4 +1,4 @@
-import { Outlet, Link } from 'react';
+import { Outlet, Link } from 'react-router';
 import '../styles/site.css';
 
 export default function SiteLayout() {

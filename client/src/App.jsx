@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react';
+import { Routes, Route, Navigate } from 'react-router';
 import SiteLayout from './layouts/SiteLayout';
 import WorkspaceLayout from './layouts/WorkspaceLayout';
 
@@ -9,6 +9,7 @@ import Home from './pages/site/Home';
 import Overview from './pages/workspace/Overview';
 import Shipments from './pages/workspace/Shipments';
 import ChaosLab from './pages/workspace/ChaosLab';
+import RiskMap from './pages/workspace/RiskMap';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Route path="/workspace" element={<WorkspaceLayout />}>
         <Route index element={<Navigate to="/workspace/overview" replace />} />
         <Route path="overview" element={<Overview />} />
+        <Route path="map" element={<RiskMap />} />
         <Route path="shipments" element={<Shipments />} />
         <Route path="chaos-lab" element={<ChaosLab />} />
       </Route>

@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react';
+import { Outlet, Link, useLocation } from 'react-router';
 import { LayoutDashboard, Map, Package, Zap, BarChart2, Anchor, Settings, LogOut } from 'lucide-react';
 import '../styles/workspace.css';
 
