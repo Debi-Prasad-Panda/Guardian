@@ -34,7 +34,7 @@ async def get_port_kpis() -> Dict[str, Any]:
 
     return {
         "critical_ports": critical,
-        "avg_congestion": round(avg_congestion, 1),
+        "avg_congestion": round(float(avg_congestion), 1),
         "total_vessels": len(vessels),
         "total_demurrage_risk": f"₹{total_demurrage / 100000:.1f}L" if total_demurrage >= 100000 else f"₹{int(total_demurrage):,}"
     }

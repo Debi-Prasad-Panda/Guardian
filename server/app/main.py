@@ -104,7 +104,7 @@ async def risk_updates_endpoint(websocket: WebSocket):
                 "timestamp": asyncio.get_event_loop().time(),
                 "updates": updates,
                 "total_monitored": max(len(updates) * 156, 1247),
-                "active_alerts": sum(1 for u in updates if u["risk"] >= 65),
+                "active_alerts": sum(1 for u in updates if int(u["risk"]) >= 65),
                 "saved_today_inr": random.randint(80000, 150000),
             }
             await websocket.send_text(json.dumps(payload))

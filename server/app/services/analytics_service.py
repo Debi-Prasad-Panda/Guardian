@@ -31,7 +31,7 @@ async def get_dashboard_overview() -> Dict[str, Any]:
 async def _compute_analytics_from_shipments() -> Dict[str, Any]:
     """Build analytics from shipment data."""
     db = get_db()
-    shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+    shipments: List[Dict[str, Any]] = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
 
     total = len(shipments)
     high_risk = sum(1 for s in shipments if s.get("risk", 0) > 0.65)
@@ -85,12 +85,12 @@ async def _compute_analytics_from_shipments() -> Dict[str, Any]:
 async def _compute_dashboard_overview() -> Dict[str, Any]:
     """Build dashboard overview from live data."""
     db = get_db()
-    shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+    shipments: List[Dict[str, Any]] = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
 
     total = len(shipments)
     high_risk = sum(1 for s in shipments if s.get("risk", 0) > 0.65)
 
-    alerts = []
+    alerts: List[Dict[str, Any]] = []
     for s in shipments:
         if s.get("risk", 0) > 0.65:
             alerts.append({
@@ -111,6 +111,7 @@ async def _compute_dashboard_overview() -> Dict[str, Any]:
                 "shipment_id": s["id"]
             })
 
+    recent_shipments: List[Dict[str, Any]] = shipments[:5]
     recent = [
         {
             "id": s["id"],
@@ -120,7 +121,7 @@ async def _compute_dashboard_overview() -> Dict[str, Any]:
             "status": s.get("status", ""),
             "carrier": s.get("carrier", "")
         }
-        for s in shipments[:5]
+        for s in recent_shipments
     ]
 
     return {

@@ -118,8 +118,9 @@ async def get_network_graph() -> Dict[str, Any]:
             carrier_groups.setdefault(carrier, []).append(s["id"])
 
     for carrier, ids in carrier_groups.items():
-        for i, src in enumerate(ids):
-            for tgt in ids[i + 1:]:
+        id_list: List[str] = ids
+        for i, src in enumerate(id_list):
+            for tgt in id_list[i + 1:]:
                 edges.append({
                     "source": src,
                     "target": tgt,

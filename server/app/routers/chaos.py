@@ -81,7 +81,7 @@ async def inject_chaos(params: ChaosParams):
     db = get_db()
 
     # Fetch all shipments
-    shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+    shipments: List[Dict[str, Any]] = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
 
     severity = params.severity_override or (params.weather_severity + params.port_strike) / 2.0
     severity_normalized = min(severity / 10.0, 1.0)
@@ -101,17 +101,17 @@ async def inject_chaos(params: ChaosParams):
 
         if is_affected:
             # Compute new risk: base + chaos severity impact
-            base_risk = s.get("risk", 0)
+            base_risk: float = float(s.get("risk", 0))
             delta = severity_normalized * random.uniform(0.3, 0.6)
-            new_risk = min(base_risk + delta, 0.99)
+            new_risk: float = min(base_risk + delta, 0.99)
             source_risks[s["id"]] = new_risk
             affected.append({
                 "id": s["id"],
                 "origin": s.get("origin", ""),
                 "destination": s.get("destination", ""),
-                "original_risk": round(base_risk, 2),
-                "new_risk": round(new_risk, 2),
-                "risk_delta": round(new_risk - base_risk, 2),
+                "original_risk": round(float(base_risk), 2),
+                "new_risk": round(float(new_risk), 2),
+                "risk_delta": round(float(new_risk) - float(base_risk), 2),
                 "status": "CRITICAL" if new_risk > 0.8 else "HIGH" if new_risk > 0.6 else "ELEVATED"
             })
 
@@ -130,9 +130,9 @@ async def inject_chaos(params: ChaosParams):
                         "id": sid,
                         "origin": ship.get("origin", ""),
                         "destination": ship.get("destination", ""),
-                        "original_risk": round(base, 2),
-                        "new_risk": round(p_risk, 2),
-                        "risk_delta": round(p_risk - base, 2),
+                        "original_risk": round(float(base), 2),
+                        "new_risk": round(float(p_risk), 2),
+                        "risk_delta": round(float(p_risk) - float(base), 2),
                         "status": "RIPPLE_EFFECT"
                     })
 
@@ -143,7 +143,7 @@ async def inject_chaos(params: ChaosParams):
         "total_affected": len(affected) + len(indirectly_affected),
         "affected_shipments": affected,
         "ripple_effects": indirectly_affected,
-        "severity": round(severity, 1),
+        "severity": round(float(severity), 1),
         "message": (
             f"🔴 {len(affected)} shipments directly impacted, "
             f"{len(indirectly_affected)} via ripple propagation. "
