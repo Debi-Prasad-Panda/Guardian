@@ -76,7 +76,7 @@ export default function Shipments() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500 w-full overflow-hidden shrink-0">
       {/* Search & Statistics */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
         <div className="flex flex-col gap-1">
@@ -124,7 +124,7 @@ export default function Shipments() {
       </Card>
 
       {/* Table Section */}
-      <Card className="border-border/40 bg-card/40 overflow-hidden">
+      <Card className="border-border/40 bg-card/40 overflow-x-auto">
         <Table>
           <TableHeader className="bg-muted/30">
             <TableRow className="border-border/40 hover:bg-transparent uppercase font-black">

@@ -178,7 +178,7 @@ export default function ShipmentDetail() {
   const tierBadge = { CRITICAL: 'destructive', PRIORITY: 'secondary', STANDARD: 'default' }[ship.tier] ?? 'default';
 
   return (
-    <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full overflow-hidden shrink-0">
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" className="shrink-0 mt-0.5" onClick={() => navigate('/workspace/shipments')}>

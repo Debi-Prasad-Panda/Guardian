@@ -4,32 +4,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Target, Brain, ShieldCheck, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Brain, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchAnalyticsSummary } from '../../services/api';
 
 
-const SAVINGS_DATA = [
-  { day: 'Mon', savings: 120000, interventions: 8 },
-  { day: 'Tue', savings: 98000, interventions: 6 },
-  { day: 'Wed', savings: 210000, interventions: 14 },
-  { day: 'Thu', savings: 175000, interventions: 11 },
-  { day: 'Fri', savings: 340000, interventions: 22 },
-  { day: 'Sat', savings: 88000, interventions: 5 },
-  { day: 'Sun', savings: 218000, interventions: 13 },
-];
-
-const CARRIER_DATA = [
-  { name: 'Blue Dart', onTime: 94, delayed: 6, cancellations: 1, volume: 'High' },
-  { name: 'DHL', onTime: 91, delayed: 8, cancellations: 1.5, volume: 'Medium' },
-  { name: 'FedEx IN', onTime: 88, delayed: 10, cancellations: 2, volume: 'High' },
-  { name: 'DTDC', onTime: 79, delayed: 18, cancellations: 3, volume: 'Medium' },
-];
-
-const MODEL_METRICS = [
-  { label: 'AUC-ROC', value: '0.841', color: 'text-primary', icon: Brain, desc: 'XGBoost Robustness' },
-  { label: 'F1 Score', value: '0.89', color: 'text-primary', icon: Target, desc: 'Calibrated Precision' },
-  { label: 'Recall', value: '0.87', color: 'text-risk-warning', icon: Zap, desc: 'Delay Capture' },
-  { label: 'Coverage', value: '90%', color: 'text-primary', icon: ShieldCheck, desc: 'Conformal Sets' },
-];
+const METRIC_ICONS = {
+  auc_roc: { icon: Brain, color: 'text-primary', label: 'AUC-ROC', desc: 'XGBoost Robustness' },
+  f1_score: { icon: Target, color: 'text-primary', label: 'F1 Score', desc: 'Calibrated Precision' },
+  recall: { icon: Zap, color: 'text-risk-warning', label: 'Recall', desc: 'Delay Capture' },
+  conformal_coverage_pct: { icon: ShieldCheck, color: 'text-primary', label: 'Coverage', desc: 'Conformal Sets', suffix: '%' },
+};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
@@ -50,11 +35,39 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Analytics() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['analytics-summary'],
+    queryFn: fetchAnalyticsSummary,
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-primary fade-in animate-in">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-8 border border-red-500/30 bg-red-500/10 rounded-xl">Failed to load analytics: {error.message}</div>;
+  }
+
+  const kpis = data.kpis;
+  const mods = data.model_performance;
+
+  const modelMetricsArray = [
+    { ...METRIC_ICONS.auc_roc, value: mods.auc_roc },
+    { ...METRIC_ICONS.f1_score, value: mods.f1_score },
+    { ...METRIC_ICONS.recall, value: mods.recall },
+    { ...METRIC_ICONS.conformal_coverage_pct, value: `${mods.conformal_coverage_pct}%` },
+  ];
+
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full overflow-hidden shrink-0">
       {/* Header Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {MODEL_METRICS.map((m, i) => (
+        {modelMetricsArray.map((m, i) => (
           <Card key={i} className="border-border/40 bg-card/40 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
@@ -90,7 +103,7 @@ export default function Analytics() {
               <CardContent>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={SAVINGS_DATA}>
+                    <AreaChart data={data.savings_trend}>
                       <defs>
                         <linearGradient id="colorInter" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="oklch(0.909 0.24 130.988)" stopOpacity={0.3}/>
@@ -119,13 +132,13 @@ export default function Analytics() {
               <CardContent>
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={SAVINGS_DATA}>
+                    <BarChart data={data.savings_trend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                       <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#666', fontSize: 10}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#666', fontSize: 10}} tickFormatter={v => `₹${v/1000}K`} />
+                      <YAxis width={40} axisLine={false} tickLine={false} tick={{fill: '#666', fontSize: 10}} tickFormatter={v => `₹${v/1000}K`} />
                       <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.02)'}} />
                       <Bar dataKey="savings" name="Savings" radius={[4, 4, 0, 0]}>
-                        {SAVINGS_DATA.map((entry, index) => (
+                        {data.savings_trend.map((entry, index) => (
                            <Cell key={`cell-${index}`} fill={index === 4 ? 'oklch(0.909 0.24 130.988)' : 'oklch(0.653 0.186 274.621)'} />
                         ))}
                       </Bar>
@@ -148,27 +161,28 @@ export default function Analytics() {
                   <TableHeader>
                     <TableRow className="border-border/40 hover:bg-transparent">
                       <TableHead>Carrier Name</TableHead>
-                      <TableHead>On-Time Rate</TableHead>
-                      <TableHead>Avg. Delay</TableHead>
-                      <TableHead>Load Volume</TableHead>
-                      <TableHead className="text-right">Risk Score</TableHead>
+                      <TableHead>Reliability</TableHead>
+                      <TableHead className="text-right">Avg. Delay</TableHead>
+                      <TableHead className="text-right">Saved (INR)</TableHead>
+                      <TableHead className="text-right">Interventions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {CARRIER_DATA.map((c) => (
-                      <TableRow key={c.name} className="border-border/40 hover:bg-primary/5">
-                        <TableCell className="font-bold">{c.name}</TableCell>
-                        <TableCell className="text-primary font-mono">{c.onTime}%</TableCell>
-                        <TableCell className="text-muted-foreground">{c.delayed}%</TableCell>
+                    {data.carrier_benchmarks.map(c => (
+                      <TableRow key={c.carrier} className="border-border/40 hover:bg-primary/5">
+                        <TableCell className="font-semibold">{c.carrier}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-mono text-[10px] uppercase border-border/50">{c.volume}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-primary">
-                          <div className="flex justify-end gap-1">
-                            {Array.from({length: 5}).map((_, i) => (
-                              <div key={i} className={`w-1.5 h-3 rounded-full ${i < Math.round(c.onTime/20) ? 'bg-primary' : 'bg-muted'}`} />
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <span className={`font-mono font-bold ${c.reliability > 90 ? 'text-primary' : 'text-yellow-400'}`}>{c.reliability}%</span>
+                            <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden shrink-0">
+                              <div className="h-full bg-primary" style={{ width: `${c.reliability}%` }} />
+                            </div>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">{c.avg_delay_h}h</TableCell>
+                        <TableCell className="text-right font-mono text-sm">₹{c.saved_inr.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="outline" className="text-[10px] border-border/40">{c.interventions}</Badge>
                         </TableCell>
                       </TableRow>
                     ))}

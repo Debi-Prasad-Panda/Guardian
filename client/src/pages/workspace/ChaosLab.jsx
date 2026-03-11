@@ -91,7 +91,7 @@ export default function ChaosLab() {
   };
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in zoom-in-95 duration-700">
+    <div className="flex flex-col gap-8 animate-in fade-in zoom-in-95 duration-700 w-full overflow-hidden shrink-0">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[600px]">
         {/* Interaction Map */}
         <Card className="lg:col-span-2 border-border/40 bg-card/30 backdrop-blur-sm relative overflow-hidden group">

@@ -48,7 +48,7 @@ export default function Ports() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full overflow-hidden shrink-0">
       <div>
         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
           <Anchor className="w-6 h-6 text-primary" /> Port Intelligence Monitor
@@ -85,7 +85,7 @@ export default function Ports() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Search port…" value={search} onChange={e=>setSearch(e.target.value)} className="pl-9 bg-card/40 border-border/40 text-sm" />
           </div>
-          <Card className="border-border/40 bg-card/30">
+          <Card className="border-border/40 bg-card/30 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-border/40 hover:bg-transparent">
@@ -151,7 +151,7 @@ export default function Ports() {
         </TabsContent>
 
         <TabsContent value="vessels" className="animate-in fade-in duration-500">
-          <Card className="border-border/40 bg-card/30">
+          <Card className="border-border/40 bg-card/30 overflow-x-auto">
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2"><Ship className="w-4 h-4 text-primary"/>Live Vessel Tracker</CardTitle>
             </CardHeader>

@@ -2,16 +2,11 @@ import MapView from '../../components/workspace/MapView';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Map, AlertCircle, Info, Activity } from 'lucide-react';
+import { Map, AlertCircle, Info, Activity, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchShipments } from '../../services/api';
 
-const MOCK_SHIPMENTS = [
-  { id: 'SHP_001', route: 'Bangalore → Delhi', tier: 'CRITICAL', risk_score: 87, longitude: 77.2090, latitude: 28.6139 },
-  { id: 'SHP_047', route: 'Mumbai → Chennai', tier: 'PRIORITY', risk_score: 52, longitude: 80.2707, latitude: 13.0827 },
-  { id: 'SHP_093', route: 'Delhi → Kolkata', tier: 'STANDARD', risk_score: 18, longitude: 88.3639, latitude: 22.5726 },
-  { id: 'SHP_112', route: 'Chennai → Pune', tier: 'CRITICAL', risk_score: 92, longitude: 73.8567, latitude: 18.5204 },
-  { id: 'SHP_214', route: 'Kolkata → Mumbai', tier: 'PRIORITY', risk_score: 65, longitude: 72.8777, latitude: 19.0760 },
-  { id: 'SHP_330', route: 'Hyderabad → Jaipur', tier: 'STANDARD', risk_score: 11, longitude: 75.7873, latitude: 26.9124 },
-];
+// Heatmap remains static for now, or you can integrate it with another endpoint later.
 
 const HEATMAP_DATA = [
   { route: 'BLR→DEL', mon: 42, tue: 55, wed: 78, thu: 87, fri: 91 },
@@ -21,8 +16,36 @@ const HEATMAP_DATA = [
 ];
 
 export default function RiskMap() {
+  const { data: shipments = [], isLoading } = useQuery({
+    queryKey: ['shipments-map'],
+    queryFn: fetchShipments,
+    refetchInterval: 15000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-primary fade-in animate-in">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Pre-process shipments to interpolate a current coordinate based on progress
+  const mapShipments = shipments.map(s => {
+    // Basic interpolation between origin and destination based on progress percentage
+    const progress = (s.progress || 0) / 100;
+    const lat = s.origin_coords.lat + (s.dest_coords.lat - s.origin_coords.lat) * progress;
+    const lng = s.origin_coords.lng + (s.dest_coords.lng - s.origin_coords.lng) * progress;
+    return { ...s, latitude: lat, longitude: lng };
+  });
+
+  const criticalCount = shipments.filter(s => s.tier === 'CRITICAL').length;
+  const priorityCount = shipments.filter(s => s.tier === 'PRIORITY').length;
+  const standardCount = shipments.filter(s => s.tier === 'STANDARD').length;
+  const totalCount = shipments.length || 1; // prevent divide by zero
+
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700 w-full overflow-hidden shrink-0">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[calc(100vh-140px)]">
         {/* Map View */}
         <Card className="lg:col-span-3 border-border/40 bg-card/30 backdrop-blur-sm relative overflow-hidden group">
@@ -44,7 +67,7 @@ export default function RiskMap() {
              </div>
           </CardHeader>
           <div className="absolute inset-0 z-0">
-             <MapView shipments={MOCK_SHIPMENTS} />
+             <MapView shipments={mapShipments} />
           </div>
         </Card>
 
@@ -58,9 +81,9 @@ export default function RiskMap() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-               <TierProgress tier="CRITICAL" count={2} total={6} color="bg-destructive" />
-               <TierProgress tier="PRIORITY" count={2} total={6} color="bg-risk-warning" />
-               <TierProgress tier="STANDARD" count={2} total={6} color="bg-primary" />
+               <TierProgress tier="CRITICAL" count={criticalCount} total={totalCount} color="bg-destructive" />
+               <TierProgress tier="PRIORITY" count={priorityCount} total={totalCount} color="bg-risk-warning" />
+               <TierProgress tier="STANDARD" count={standardCount} total={totalCount} color="bg-primary" />
             </CardContent>
           </Card>
 

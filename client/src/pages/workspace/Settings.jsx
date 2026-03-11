@@ -23,7 +23,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col gap-6 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500 w-full overflow-hidden shrink-0">
       <div>
         <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
           <SettingsIcon className="w-6 h-6 text-primary" /> Settings
