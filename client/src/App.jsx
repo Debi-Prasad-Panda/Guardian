@@ -10,6 +10,8 @@ import Overview from './pages/workspace/Overview';
 import Shipments from './pages/workspace/Shipments';
 import ChaosLab from './pages/workspace/ChaosLab';
 import RiskMap from './pages/workspace/RiskMap';
+import Analytics from './pages/workspace/Analytics';
+import Ports from './pages/workspace/Ports';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
         <Route path="map" element={<RiskMap />} />
         <Route path="shipments" element={<Shipments />} />
         <Route path="chaos-lab" element={<ChaosLab />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="ports" element={<Ports />} />
       </Route>
       
       {/* Fallback */}
