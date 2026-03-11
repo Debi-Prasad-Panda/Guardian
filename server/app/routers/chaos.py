@@ -1,120 +1,152 @@
 """
-Guardian Backend — Enhanced Chaos Lab Router
-POST /api/chaos/inject → propagates disruption across shipment network
-GET  /api/chaos/presets → scenario presets
-GET  /api/chaos/network → risk propagation graph post-inject
+Guardian — Chaos Lab Router
+Chaos injection and risk propagation simulation, using MongoDB shipment data.
 """
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
+from app.database import get_db
 import random
-from fastapi import APIRouter, Body
 
-router = APIRouter()
+router = APIRouter(prefix="/api/chaos", tags=["chaos"])
 
+
+# ── Presets ──
 PRESETS = [
-    {"id": "suez",    "name": "Suez Canal Blockage (2021 Replay)",  "weather": 0, "strike": 0, "hub": "BOM", "description": "Global supply chain disruption from canal blockage. 320+ vessels stalled."},
-    {"id": "monsoon", "name": "Mumbai Monsoon Season",              "weather": 85, "strike": 0, "hub": "BOM", "description": "Severe rainfall disrupting road freight and port operations."},
-    {"id": "strike",  "name": "National Transport Strike (NH-44)",   "weather": 0, "strike": 90, "hub": "NAG", "description": "Nationwide truckers strike affecting all ground routes."},
-    {"id": "typhoon", "name": "Chennai Cyclone Warning",             "weather": 92, "strike": 0, "hub": "MAA", "description": "Category 2 cyclone approaching Tamil Nadu coast, port closures likely."},
+    {
+        "id": "suez_blockage",
+        "name": "Suez Canal Blockage",
+        "description": "Simulates a Suez Canal blockage — March 2021 scenario. ~400 vessels affected.",
+        "params": {"weather_severity": 3, "port_strike": 0, "affected_hub": "Mumbai JNPT", "severity_override": 10}
+    },
+    {
+        "id": "monsoon_surge",
+        "name": "Monsoon Surge — West India",
+        "description": "Severe monsoon flooding disrupts road freight in western India corridor.",
+        "params": {"weather_severity": 9, "port_strike": 2, "affected_hub": "Mumbai JNPT", "severity_override": None}
+    },
+    {
+        "id": "port_strike",
+        "name": "Port Workers Strike — Chennai",
+        "description": "Dock workers walkout at Chennai port halts operations.",
+        "params": {"weather_severity": 1, "port_strike": 9, "affected_hub": "Chennai Port", "severity_override": None}
+    },
+    {
+        "id": "multi_disruption",
+        "name": "Multi-Region Disruption",
+        "description": "Simultaneous weather + strike events across Mumbai and Kolkata.",
+        "params": {"weather_severity": 7, "port_strike": 7, "affected_hub": "All", "severity_override": None}
+    }
 ]
 
-ROUTE_GRAPH = {
-    "BOM": ["SHP_001","SHP_214","SHP_451"],
-    "MAA": ["SHP_112","SHP_047"],
-    "NAG": ["SHP_001","SHP_093","SHP_330"],
-    "DEL": ["SHP_001","SHP_502","SHP_093"],
-    "HYD": ["SHP_330","SHP_214"],
+
+class ChaosParams(BaseModel):
+    weather_severity: float = 5.0
+    port_strike: float = 5.0
+    affected_hub: str = "Mumbai JNPT"
+    severity_override: Optional[float] = None
+
+
+# ── Risk propagation logic ──
+PROPAGATION_GRAPH = {
+    "SHP_001": ["SHP_006", "SHP_008"],
+    "SHP_002": ["SHP_007"],
+    "SHP_006": ["SHP_001", "SHP_002"],
+    "SHP_005": ["SHP_001"],
+    "SHP_008": ["SHP_004"],
 }
 
-def _propagate(weather: int, strike: int, hub: str, base_shipments: int = 8) -> dict:
-    severity = (weather * 0.6 + strike * 0.4) / 100.0
-    affected_nodes = ROUTE_GRAPH.get(hub, [])
-    affected_count = min(base_shipments, max(1, int(severity * base_shipments) + 2))
-    interventions_triggered = max(0, affected_count - 1)
-    savings_potential = int(affected_count * 85000 * severity)
 
-    before_after = [
-        {"shipment": f"SHP_{100+i*37:03d}" if i > 0 else "SHP_001",
-         "risk_before": random.randint(20, 60),
-         "risk_after": min(97, random.randint(65, 95)),
-         "action_recommended": random.choice(["Air Cargo", "Re-route", "Buffer Stock", "Expedite"])}
-        for i in range(min(5, affected_count))
-    ]
-
-    propagation_ripple = [
-        {"node": n, "impact": round(severity * random.uniform(0.5, 1.0) * 100, 1)}
-        for n in list(ROUTE_GRAPH.keys())
-    ]
-
-    return {
-        "affected_shipments": affected_count,
-        "interventions_triggered": interventions_triggered,
-        "savings_potential_inr": savings_potential,
-        "severity_score": round(severity * 100, 1),
-        "affected_nodes": list(ROUTE_GRAPH.get(hub, {hub: []}).keys() if isinstance(ROUTE_GRAPH.get(hub), dict) else [hub]),
-        "before_after": before_after,
-        "propagation_ripple": propagation_ripple,
-        "network_graph": _build_propagation_graph(hub, severity),
-    }
-
-
-def _build_propagation_graph(hub: str, severity: float) -> dict:
-    hub_risk_boost = {
-        "BOM": {"BOM": 91, "PNQ": 72, "BLR": 55, "DEL": 62},
-        "MAA": {"MAA": 94, "CBE": 78, "HYD": 61, "PNQ": 48},
-        "NAG": {"NAG": 88, "BHO": 82, "DEL": 79, "BLR": 55},
-        "DEL": {"DEL": 87, "BHO": 71, "NAG": 60, "CCU": 44},
-    }.get(hub, {})
-
-    nodes = [
-        {"id": "BLR", "label": "Bangalore",   "risk": hub_risk_boost.get("BLR", 22),  "type": "hub",    "x": 200, "y": 380},
-        {"id": "PNQ", "label": "Pune",         "risk": hub_risk_boost.get("PNQ", 38),  "type": "relay",  "x": 155, "y": 260},
-        {"id": "NAG", "label": "Nagpur",       "risk": hub_risk_boost.get("NAG", 72),  "type": "relay",  "x": 280, "y": 200},
-        {"id": "BHO", "label": "Bhopal",       "risk": hub_risk_boost.get("BHO", 78),  "type": "relay",  "x": 255, "y": 130},
-        {"id": "DEL", "label": "Delhi",        "risk": hub_risk_boost.get("DEL", 87),  "type": "dest",   "x": 270, "y": 55},
-        {"id": "MAA", "label": "Chennai",      "risk": hub_risk_boost.get("MAA", 84),  "type": "port",   "x": 380, "y": 420},
-        {"id": "CBE", "label": "Coimbatore",   "risk": hub_risk_boost.get("CBE", 45),  "type": "relay",  "x": 340, "y": 320},
-        {"id": "HYD", "label": "Hyderabad",    "risk": hub_risk_boost.get("HYD", 31),  "type": "relay",  "x": 330, "y": 220},
-        {"id": "BOM", "label": "Mumbai",       "risk": hub_risk_boost.get("BOM", 91),  "type": "port",   "x": 110, "y": 240},
-        {"id": "CCU", "label": "Kolkata",      "risk": hub_risk_boost.get("CCU", 45),  "type": "relay",  "x": 470, "y": 190},
-    ]
-
-    # Amplify hub node
-    for node in nodes:
-        if node["id"] == hub:
-            node["risk"] = min(99, int(node["risk"] * (1 + severity * 0.3)))
-            node["type"] = "epicentre"
-
-    edges = [
-        {"source": "BLR", "target": "PNQ",  "shipments": 3, "congestion": round(0.42 + severity * 0.3, 2)},
-        {"source": "PNQ", "target": "NAG",  "shipments": 2, "congestion": round(0.71 + severity * 0.2, 2)},
-        {"source": "NAG", "target": "BHO",  "shipments": 2, "congestion": round(0.76 + severity * 0.15, 2)},
-        {"source": "BHO", "target": "DEL",  "shipments": 2, "congestion": round(0.88 + severity * 0.1, 2)},
-        {"source": "MAA", "target": "CBE",  "shipments": 2, "congestion": round(0.84 + severity * 0.15, 2)},
-        {"source": "CBE", "target": "HYD",  "shipments": 1, "congestion": round(0.58 + severity * 0.25, 2)},
-        {"source": "HYD", "target": "NAG",  "shipments": 1, "congestion": round(0.62 + severity * 0.2, 2)},
-        {"source": "BLR", "target": "BOM",  "shipments": 1, "congestion": round(0.55 + severity * 0.35, 2)},
-        {"source": "BOM", "target": "DEL",  "shipments": 1, "congestion": round(0.79 + severity * 0.2, 2)},
-        {"source": "CCU", "target": "BOM",  "shipments": 1, "congestion": round(0.44 + severity * 0.3, 2)},
-    ]
-    # Cap congestion at 1.0
-    for e in edges:
-        e["congestion"] = min(1.0, e["congestion"])
-    return {"nodes": nodes, "edges": edges}
-
-
-@router.post("/inject")
-def inject_chaos(params: dict = Body(...)):
-    weather = int(params.get("weather", 50))
-    strike  = int(params.get("strike", 50))
-    hub     = str(params.get("hub", "BOM"))
-    return _propagate(weather, strike, hub)
+def propagate_risk(source_risks: Dict[str, float], graph: Dict, decay: float = 0.7) -> Dict[str, float]:
+    """Propagate risk through the network with decay."""
+    all_risks = dict(source_risks)
+    for source, targets in graph.items():
+        if source in source_risks:
+            for target in targets:
+                propagated = source_risks[source] * decay * random.uniform(0.8, 1.0)
+                current = all_risks.get(target, 0)
+                all_risks[target] = min(max(current, propagated), 1.0)
+    return all_risks
 
 
 @router.get("/presets")
-def get_presets():
+async def get_presets():
+    """Return available chaos simulation presets."""
     return PRESETS
 
 
-@router.get("/network")
-def get_baseline_network():
-    """Baseline network graph before chaos injection."""
-    return _build_propagation_graph("BOM", 0.0)
+@router.post("/inject")
+async def inject_chaos(params: ChaosParams):
+    """Inject a chaos event and compute propagation impact on network."""
+    db = get_db()
+
+    # Fetch all shipments
+    shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+
+    severity = params.severity_override or (params.weather_severity + params.port_strike) / 2.0
+    severity_normalized = min(severity / 10.0, 1.0)
+
+    # Determine which shipments are directly affected
+    affected = []
+    source_risks: Dict[str, float] = {}
+
+    for s in shipments:
+        is_affected = False
+        if params.affected_hub == "All":
+            is_affected = True
+        elif params.affected_hub in (s.get("origin", ""), s.get("destination", "")):
+            is_affected = True
+        elif s.get("alert_text") and params.affected_hub.split()[0].lower() in s.get("alert_text", "").lower():
+            is_affected = True
+
+        if is_affected:
+            # Compute new risk: base + chaos severity impact
+            base_risk = s.get("risk", 0)
+            delta = severity_normalized * random.uniform(0.3, 0.6)
+            new_risk = min(base_risk + delta, 0.99)
+            source_risks[s["id"]] = new_risk
+            affected.append({
+                "id": s["id"],
+                "origin": s.get("origin", ""),
+                "destination": s.get("destination", ""),
+                "original_risk": round(base_risk, 2),
+                "new_risk": round(new_risk, 2),
+                "risk_delta": round(new_risk - base_risk, 2),
+                "status": "CRITICAL" if new_risk > 0.8 else "HIGH" if new_risk > 0.6 else "ELEVATED"
+            })
+
+    # Propagate risk to connected shipments
+    propagated_risks = propagate_risk(source_risks, PROPAGATION_GRAPH)
+
+    # Find indirectly affected
+    indirectly_affected = []
+    for sid, p_risk in propagated_risks.items():
+        if sid not in source_risks:
+            base = next((s.get("risk", 0) for s in shipments if s["id"] == sid), 0)
+            if p_risk > base:
+                ship = next((s for s in shipments if s["id"] == sid), None)
+                if ship:
+                    indirectly_affected.append({
+                        "id": sid,
+                        "origin": ship.get("origin", ""),
+                        "destination": ship.get("destination", ""),
+                        "original_risk": round(base, 2),
+                        "new_risk": round(p_risk, 2),
+                        "risk_delta": round(p_risk - base, 2),
+                        "status": "RIPPLE_EFFECT"
+                    })
+
+    return {
+        "event": f"Chaos injection: severity={severity:.1f}, hub={params.affected_hub}",
+        "directly_affected": len(affected),
+        "indirectly_affected": len(indirectly_affected),
+        "total_affected": len(affected) + len(indirectly_affected),
+        "affected_shipments": affected,
+        "ripple_effects": indirectly_affected,
+        "severity": round(severity, 1),
+        "message": (
+            f"🔴 {len(affected)} shipments directly impacted, "
+            f"{len(indirectly_affected)} via ripple propagation. "
+            f"Total network disruption: {len(affected) + len(indirectly_affected)} shipments."
+        )
+    }

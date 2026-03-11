@@ -60,9 +60,33 @@ export const fetchBaselineNetwork = () =>
 export const fetchPorts = () =>
   apiFetch('/api/ports/');
 
+export const fetchPortVessels = () =>
+  apiFetch('/api/ports/vessels');
+
+export const fetchPortKpis = () =>
+  apiFetch('/api/ports/kpis');
+
 // ─── Analytics ─────────────────────────────────────────────────────────────────
 export const fetchAnalyticsSummary = () =>
   apiFetch('/api/analytics/summary');
+
+// ─── Settings ──────────────────────────────────────────────────────────────────
+export const fetchSettings = () =>
+  apiFetch('/api/settings/');
+
+export const updateSettings = (payload) =>
+  apiFetch('/api/settings/', { method: 'PUT', body: JSON.stringify(payload) });
+
+// ─── Shipment Detail Sub-endpoints ─────────────────────────────────────────────
+export const fetchShipmentDiCE = (id) =>
+  apiFetch(`/api/shipments/${id}/dice`);
+
+export const fetchShipmentKimi = (id) =>
+  apiFetch(`/api/shipments/${id}/kimi`);
+
+// ─── Health Check ──────────────────────────────────────────────────────────────
+export const fetchHealthCheck = () =>
+  apiFetch('/api/health');
 
 // ─── WebSocket — Live Risk Updates ────────────────────────────────────────────
 /**
@@ -91,3 +115,4 @@ export function connectRiskWebSocket(onMessage, onError) {
 
   return () => ws.readyState === WebSocket.OPEN && ws.close();
 }
+
