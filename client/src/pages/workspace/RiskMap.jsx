@@ -1,4 +1,8 @@
 import MapView from '../../components/workspace/MapView';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Map, AlertCircle, Info, Activity } from 'lucide-react';
 
 const MOCK_SHIPMENTS = [
   { id: 'SHP_001', route: 'Bangalore → Delhi', tier: 'CRITICAL', risk_score: 87, longitude: 77.2090, latitude: 28.6139 },
@@ -10,63 +14,100 @@ const MOCK_SHIPMENTS = [
 ];
 
 const HEATMAP_DATA = [
-  ['Route', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-  ['BLR→DEL', 42, 55, 78, 87, 91],
-  ['BOM→MAA', 30, 38, 48, 52, 50],
-  ['DEL→CCU', 12, 15, 18, 18, 22],
-  ['CHN→PNE', 60, 70, 85, 90, 92],
+  { route: 'BLR→DEL', mon: 42, tue: 55, wed: 78, thu: 87, fri: 91 },
+  { route: 'BOM→MAA', mon: 30, tue: 38, wed: 48, thu: 52, fri: 50 },
+  { route: 'DEL→CCU', mon: 12, tue: 15, wed: 18, thu: 18, fri: 22 },
+  { route: 'CHN→PNE', mon: 60, tue: 70, wed: 85, thu: 90, fri: 92 },
 ];
 
 export default function RiskMap() {
   return (
-    <div className="page-container flex-col gap-4" style={{ height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border-medium)' }}>
-        <div>
-          <div className="text-xs text-secondary mb-1">Guardian › Risk Map</div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Live Risk Map</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <LegendDot color="var(--risk-critical)" label="Critical (≥75%)" />
-          <LegendDot color="var(--risk-warning)" label="Priority (≥45%)" />
-          <LegendDot color="var(--risk-safe)" label="Standard (<45%)" />
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1rem', flex: 1, minHeight: 'calc(100vh - 160px)' }}>
-        <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 500 }}>
-          <MapView shipments={MOCK_SHIPMENTS} />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="card" style={{ padding: '1.25rem' }}>
-            <div style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '0.875rem' }}>Risk Tier Breakdown</div>
-            <TierBar tier="CRITICAL" count={2} total={6} color="var(--risk-critical)" />
-            <TierBar tier="PRIORITY" count={2} total={6} color="var(--risk-warning)" />
-            <TierBar tier="STANDARD" count={2} total={6} color="var(--risk-safe)" />
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[calc(100vh-140px)]">
+        {/* Map View */}
+        <Card className="lg:col-span-3 border-border/40 bg-card/30 backdrop-blur-sm relative overflow-hidden group">
+          <CardHeader className="flex flex-row items-center justify-between z-10 pointer-events-none">
+             <div className="bg-background/80 backdrop-blur-md p-3 rounded-xl border border-border/50 shadow-2xl">
+               <CardTitle className="text-sm font-bold flex items-center gap-2">
+                 <Map className="w-4 h-4 text-primary" />
+                 LIVE GLOBAL RISK DISTRIBUTION
+               </CardTitle>
+               <CardDescription className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
+                 Last updated: Just now
+               </CardDescription>
+             </div>
+             
+             <div className="flex gap-4 bg-background/80 backdrop-blur-md px-4 py-2 rounded-full border border-border/50">
+               <LegendItem color="bg-destructive" label="CRITICAL" />
+               <LegendItem color="bg-risk-warning" label="PRIORITY" />
+               <LegendItem color="bg-primary" label="STANDARD" />
+             </div>
+          </CardHeader>
+          <div className="absolute inset-0 z-0">
+             <MapView shipments={MOCK_SHIPMENTS} />
           </div>
-          <div className="card" style={{ padding: '1.25rem', flex: 1 }}>
-            <div style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '0.875rem' }}>Risk Heatmap (5 days)</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem' }}>
-              <thead>
-                <tr>
-                  {HEATMAP_DATA[0].map((h, i) => (
-                    <th key={i} style={{ padding: '4px 6px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: i === 0 ? 'left' : 'center' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {HEATMAP_DATA.slice(1).map((row, ri) => (
-                  <tr key={ri}>
-                    <td style={{ padding: '4px 6px', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{row[0]}</td>
-                    {row.slice(1).map((v, vi) => (
-                      <td key={vi} style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700, borderRadius: 4, color: 'white', background: v >= 75 ? 'var(--risk-critical)' : v >= 45 ? 'var(--risk-warning)' : v >= 20 ? 'rgba(34,197,94,0.5)' : 'var(--bg-elevated)' }}>
-                        {v}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </Card>
+
+        {/* Intelligence Sidebar */}
+        <div className="flex flex-col gap-6">
+          <Card className="border-border/40 bg-card/40 backdrop-blur-sm shadow-xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-tight">
+                <Activity className="w-4 h-4 text-primary" />
+                Risk Tier Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+               <TierProgress tier="CRITICAL" count={2} total={6} color="bg-destructive" />
+               <TierProgress tier="PRIORITY" count={2} total={6} color="bg-risk-warning" />
+               <TierProgress tier="STANDARD" count={2} total={6} color="bg-primary" />
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/40 bg-card/40 backdrop-blur-sm shadow-xl flex-1 overflow-hidden">
+            <CardHeader className="pb-3 text-center">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-primary/10 py-1 rounded">
+                Dynamic Heatmap (5D)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+               <Table>
+                 <TableHeader>
+                   <TableRow className="border-border/20 hover:bg-transparent">
+                     <TableHead className="text-[10px] font-bold">ROUTE</TableHead>
+                     <TableHead className="text-center text-[10px] font-bold">M</TableHead>
+                     <TableHead className="text-center text-[10px] font-bold">W</TableHead>
+                     <TableHead className="text-center text-[10px] font-bold">F</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {HEATMAP_DATA.map((row) => (
+                     <TableRow key={row.route} className="border-border/10 hover:bg-primary/5">
+                        <TableCell className="text-[10px] font-mono font-bold leading-none">{row.route}</TableCell>
+                        <TableCell className="text-center">
+                           <HeatCell value={row.mon} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                           <HeatCell value={row.wed} />
+                        </TableCell>
+                        <TableCell className="text-center">
+                           <HeatCell value={row.fri} />
+                        </TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+            </CardContent>
+          </Card>
+
+          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 animate-pulse">
+             <div className="flex items-center gap-2 text-destructive mb-1 text-xs font-bold">
+                <AlertCircle size={14} />
+                ANOMALY DETECTED
+             </div>
+             <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Inter-state congestion on **NH-44** causing ripple effect on 4 CRITICAL shipmetns.
+             </p>
           </div>
         </div>
       </div>
@@ -74,26 +115,34 @@ export default function RiskMap() {
   );
 }
 
-function LegendDot({ color, label }) {
+function HeatCell({ value }) {
+  const color = value >= 75 ? 'bg-destructive/80' : value >= 45 ? 'bg-risk-warning/80' : value >= 20 ? 'bg-primary/60' : 'bg-muted';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{label}</span>
+    <div className={`w-5 h-5 mx-auto rounded flex items-center justify-center text-[8px] font-black text-white ${color}`}>
+       {value}
     </div>
   );
 }
 
-function TierBar({ tier, count, total, color }) {
-  const pct = Math.round((count / total) * 100);
+function LegendItem({ color, label }) {
   return (
-    <div style={{ marginBottom: '0.75rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: '0.75rem', color }}>{tier}</span>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{count} / {total}</span>
-      </div>
-      <div style={{ height: 6, background: 'var(--bg-elevated)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3 }} />
-      </div>
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${color}`} />
+      <span className="text-[9px] font-black tracking-widest">{label}</span>
     </div>
   );
 }
+
+function TierProgress({ tier, count, total, color }) {
+  const value = (count / total) * 100;
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-end">
+        <span className="text-[10px] font-black uppercase text-secondary-foreground">{tier}</span>
+        <span className="text-[10px] font-mono text-muted-foreground">{count}/{total}</span>
+      </div>
+      <Progress value={value} className={`h-1 bg-muted ${color === 'bg-destructive' ? '[&>div]:bg-destructive' : color === 'bg-risk-warning' ? '[&>div]:bg-risk-warning' : '[&>div]:bg-primary'}`} />
+    </div>
+  );
+}
+
