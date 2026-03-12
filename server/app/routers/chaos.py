@@ -237,7 +237,9 @@ async def batch_disruption(hub: str, severity: float):
         "hub": hub,
         "severity": severity,
         "affected_nodes": affected,
+        "affected": affected,
         "total_affected": len(affected),
+        "total_count": len(affected),
         "message": f"Batch disruption: {len(affected)} nodes flagged across network."
     }
 
@@ -287,7 +289,9 @@ async def ripple_from_shipment(shipment_id: str, base_risk: float = 0.78):
         "source_shipment": shipment_id,
         "base_risk": round(seed_risk, 4),
         "propagated_nodes": nodes,
+        "affected": nodes,
         "total_nodes_affected": len(nodes),
+        "total_count": len(nodes),
         "message": (
             f"Risk propagated from {shipment_id} (base={seed_risk:.0%}) "
             f"to {len(nodes) - 1} connected shipments."
