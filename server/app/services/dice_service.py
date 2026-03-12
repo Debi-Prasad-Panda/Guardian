@@ -122,6 +122,12 @@ def load_dice_explainer():
         raise
 
 
+# ── Backward-compatible aliases ──────────────────────────────────────────────
+# Some test scripts and router modules call these shorter names.
+load_dice_engine = load_dice_explainer
+load_dice_model  = load_dice_explainer
+
+
 def generate_counterfactuals(
     shipment: Dict[str, Any],
     horizon_hours: int = 48,

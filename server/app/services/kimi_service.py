@@ -452,3 +452,8 @@ async def generate_kimi_for_shipment(
 
     # Step 3: Get Kimi recommendation
     return get_intervention_recommendation(shipment, dice_result, shap_top_feature)
+
+
+# ── Backward-compatible aliases ──────────────────────────────────────────────
+# Some test scripts import these shorter names.
+get_intervention = get_intervention_recommendation
