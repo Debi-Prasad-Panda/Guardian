@@ -17,6 +17,36 @@ async def get_analytics_summary() -> Dict[str, Any]:
     return await _compute_analytics_from_shipments()
 
 
+async def get_graph_summary() -> Dict[str, Any]:
+    """Return supply-chain graph statistics: shipment count, connection count, high-risk node count."""
+    db = get_db()
+
+    # Try cached record first
+    cached = await db.analytics.find_one({"type": "graph_summary"}, {"_id": 0})
+    if cached:
+        return cached
+
+    # Compute live from shipments + network graph
+    shipments: List[Dict[str, Any]] = await db.shipments.find({}, {"_id": 0}).to_list(length=None)
+    shipment_count = len(shipments)
+    high_risk_count = sum(1 for s in shipments if s.get("risk", 0) > 0.65)
+
+    # Count connections from the network graph edges collection if available
+    edges: List[Dict[str, Any]] = await db.edges.find({}, {"_id": 0}).to_list(length=None)
+    if not edges:
+        # Fallback: derive edge count from shipment network hops
+        connection_count = max(shipment_count - 1, 0)
+    else:
+        connection_count = len(edges)
+
+    return {
+        "type": "graph_summary",
+        "shipment_count": shipment_count,
+        "connection_count": connection_count,
+        "high_risk_count": high_risk_count,
+    }
+
+
 async def get_dashboard_overview() -> Dict[str, Any]:
     """Fetch dashboard overview from MongoDB."""
     db = get_db()

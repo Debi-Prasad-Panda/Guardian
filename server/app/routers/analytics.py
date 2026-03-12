@@ -18,3 +18,9 @@ async def get_analytics_summary():
 async def get_dashboard_overview():
     """Return dashboard overview with KPIs, alerts, interventions, heatmap."""
     return await analytics_service.get_dashboard_overview()
+
+
+@router.get("/analytics/graph-summary")
+async def get_graph_summary():
+    """Return supply-chain graph stats: shipment count, connection count, high-risk node count."""
+    return await analytics_service.get_graph_summary()

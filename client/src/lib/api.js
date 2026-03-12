@@ -38,6 +38,12 @@ export const injectChaos = (params) =>
     method: 'POST',
     body: JSON.stringify(params),
   });
+/** Ripple-propagation for a single shipment node */
+export const fetchRipple = (shipmentId) =>
+  request(`/api/chaos/ripple/${shipmentId}`);
+/** Batch disruption — colours every node red simultaneously */
+export const batchDisruption = (hub, severity) =>
+  request(`/api/chaos/batch-disruption?hub=${encodeURIComponent(hub)}&severity=${severity}`);
 
 // ── Ports ──
 export const fetchPorts = () => request('/api/ports');
@@ -46,6 +52,8 @@ export const fetchVessels = () => request('/api/ports/vessels');
 
 // ── Network / Ripple ──
 export const fetchNetwork = () => request('/api/shipments/network');
+/** Graph-level summary: shipment count, connection count, high-risk node count */
+export const fetchGraphSummary = () => request('/api/analytics/graph-summary');
 
 // ── Health ──
 export const checkHealth = () => request('/api/health');
