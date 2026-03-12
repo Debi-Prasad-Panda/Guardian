@@ -83,3 +83,15 @@ The application integrates premium aesthetic standards using modern Tailwind pro
 -   **Theming:** Dark-themed UI with accents (`text-dash-accent`, `bg-dash-risk`, etc.)
 -   **Interactivity:** Hover transitions, pulsating animated components (`animate-pulse`), and fade-in features (`animate-fade-in`) give the interface a dynamic and premium feel. 
 -   **Responsiveness:** Extensively uses mobile-first CSS grids (`grid-cols-12`) ensuring standard dashboard formatting across all breakpoint classes.
+
+## 6. UI Sections & Components
+
+The frontend relies heavily on modular, reusable functional components located in `src/components` and wrapped by elements in `src/layouts`.
+
+### Core Layout
+- **`DashboardLayout.jsx`**: The primary architectural layout wrapper uniting the `Sidebar` and `Header` with a flexible main content area (`<Outlet />`). It centrally manages the sidebar toggle state and uses flexible column layout to ensure the application occupies consistent screen real-estate (`h-screen overflow-hidden`).
+
+### Shared Components
+- **`Header.jsx`**: The top navigation bar containing a dynamic system clock, a global shipment/alert search input, quick link actions (e.g., Reports), and the user profile widget. It also contains the mobile-responsive trigger to toggle the sidebar.
+- **`Sidebar.jsx`**: The persistent left-side navigation menu. Links are logically grouped into three main sections: **Main** (Dashboard, Health Wallet, Port Intelligence), **Features** (Chaos Injector, Network Ripple), and **Tools** (Analytics, Settings, Model Card). It also features an animated "AI Active" system listener status widget at the bottom.
+- **`InterventionCard.jsx`**: A highly interactive, crucial AI decision-support component used within shipment details. It fetches and displays DiCE counterfactuals paired with Kimi K2.5 intervention recommendations. It visualizes the current predictive risk, the LLM-selected optimal recommendation, a mathematically-grounded cost-benefit grid (Intervention Cost vs. SLA Penalty), Net Savings projections, CO2 Impact estimations, and fallback alternative options.

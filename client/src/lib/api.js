@@ -39,11 +39,11 @@ export const injectChaos = (params) =>
     body: JSON.stringify(params),
   });
 /** Ripple-propagation for a single shipment node */
-export const fetchRipple = (shipmentId) =>
-  request(`/api/chaos/ripple/${shipmentId}`);
+export const triggerRipple = (shipmentId, baseRisk = 0.78) =>
+  request(`/api/chaos/ripple/${shipmentId}?base_risk=${baseRisk}`, { method: 'POST' });
 /** Batch disruption — colours every node red simultaneously */
-export const batchDisruption = (hub, severity) =>
-  request(`/api/chaos/batch-disruption?hub=${encodeURIComponent(hub)}&severity=${severity}`);
+export const triggerBatchDisruption = (hub, severity) =>
+  request(`/api/chaos/batch-disruption?hub=${encodeURIComponent(hub)}&severity=${severity}`, { method: 'POST' });
 
 // ── Ports ──
 export const fetchPorts = () => request('/api/ports');
@@ -53,9 +53,16 @@ export const fetchVessels = () => request('/api/ports/vessels');
 // ── Network / Ripple ──
 export const fetchNetwork = () => request('/api/shipments/network');
 /** Graph-level summary: shipment count, connection count, high-risk node count */
-export const fetchGraphSummary = () => request('/api/analytics/graph-summary');
+export const fetchGraphSummary = () => request('/api/chaos/graph/summary');
+export const fetchAnalyticsGraphSummary = () => request('/api/analytics/graph-summary');
 
 // ── ML / Intervention ──
+export const predictShipment = (shipmentId) =>
+  request('/api/ml/predict-shipment', {
+    method: 'POST',
+    body: JSON.stringify({ shipment_id: shipmentId }),
+  });
+
 export const fetchIntervention = (shipmentId, horizonHours = 48) =>
   request('/api/ml/intervention', {
     method: 'POST',
@@ -68,6 +75,18 @@ export const fetchIntervention = (shipmentId, horizonHours = 48) =>
 
 export const fetchMLHealth = () => request('/api/ml/health');
 export const fetchTower1Health = () => request('/api/ml/tower1/health');
+
+// ── External / Live Data ──
+export const fetchLiveContext = () => request('/api/external/live-context');
+export const fetchWeather = () => request('/api/external/weather');
+
+// ── WebSocket ──
+export const createRiskSocket = (onMessage) => {
+  const ws = new WebSocket('ws://localhost:8000/ws/risk-updates');
+  ws.onmessage = (e) => onMessage(JSON.parse(e.data));
+  ws.onerror = (e) => console.warn('[WS] error:', e);
+  return ws;
+};
 
 // ── Health ──
 export const checkHealth = () => request('/api/health');

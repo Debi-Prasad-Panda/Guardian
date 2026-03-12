@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { TrendingUp, Users, ShieldCheck, Plus, Minus, Search, Zap } from 'lucide-react'
-import { fetchDashboardOverview, fetchShipments } from '../lib/api'
+import { fetchDashboardOverview, fetchShipments, createRiskSocket } from '../lib/api'
 
 export default function Dashboard() {
   const [overview, setOverview] = useState(null)
@@ -11,6 +11,17 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardOverview().then((d) => d && setOverview(d))
     fetchShipments().then((s) => s && setShipments(s))
+  }, [])
+
+  useEffect(() => {
+    const ws = createRiskSocket((data) => {
+      setShipments(prev => prev.map(s =>
+        s.id === data.shipment_id
+          ? { ...s, risk: data.risk_score, uncertainty: data.uncertainty }
+          : s
+      ))
+    })
+    return () => ws.close()
   }, [])
 
   const filteredShipments = shipments.filter((s) => {

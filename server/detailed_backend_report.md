@@ -39,6 +39,26 @@ Exposes the raw backend models.
 - `POST /predict-shipment` : Full end-to-end pipeline lookup merging db shipment parameters and running through all towers.
 - `POST /intervention` : Triggers the complete sequence: DiCE what-if generation -> Kimi analysis -> Cost vs SLA comparison outputs.
 
+### Analytics (`/api/analytics/` & `/api/dashboard/`)
+Provides KPI data, dashboard overview, and system metrics.
+- `GET /analytics/summary` : Returns full analytics summary with KPIs, model metrics, trends, and benchmarks.
+- `GET /dashboard/overview` : Returns dashboard overview with KPIs, alerts, interventions, and heatmap.
+- `GET /analytics/graph-summary` : Returns supply-chain graph statistics (vessel count, connections, high-risk nodes).
+
+### External Data (`/api/external/`)
+Exposes real-time data from PortWatch, Open-Meteo, and News APIs.
+- `GET /live-context` : Combined real-data context for Chaos Injector + Network Ripple.
+- `GET /ports/congestion` : Real-time port congestion data from PortWatch (satellite vessel counts).
+- `GET /ports/disruptions` : Active GDACS natural disasters and geopolitical events.
+- `GET /chokepoints` : Chokepoint status for Suez Canal, Hormuz, and Malacca.
+- `GET /weather` : Current weather conditions and severity indices for port cities.
+- `GET /news` : Recent logistics and supply chain news headlines with sentiment analysis.
+
+### Settings (`/api/settings/`)
+Persists and retrieves user configuration in MongoDB.
+- `GET /` : Returns current user settings (risk thresholds, API keys, notification preferences).
+- `PUT /` : Updates user settings.
+
 ---
 
 ## 3. The "Three-Tower" ML Pipeline Deep-Dive

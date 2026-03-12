@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from 'react-leaflet'
 import { Sliders, TrendingUp, AlertTriangle, Zap } from 'lucide-react'
-import { fetchChaosPresets, injectChaos, batchDisruption } from '../lib/api'
+import { fetchChaosPresets, injectChaos, triggerBatchDisruption } from '../lib/api'
 
 const LOG_COLORS = {
   CRITICAL: 'text-red-400',
@@ -117,7 +117,7 @@ export default function ChaosInjector() {
       { time: t, type: 'CRITICAL', text: `>>> BATCH DISRUPTION FIRED <<< Hub: ${batchHub} | Severity: ${batchSeverity}/10` },
     ])
 
-    const data = await batchDisruption(batchHub, batchSeverity)
+    const data = await triggerBatchDisruption(batchHub, batchSeverity)
     const t2 = ts()
 
     // Build risk map — ALL nodes go red

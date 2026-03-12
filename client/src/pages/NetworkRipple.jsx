@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from 'react-leaflet'
 import { Network, Activity, Filter, RefreshCw } from 'lucide-react'
-import { fetchRipple, fetchNetwork } from '../lib/api'
+import { triggerRipple, fetchNetwork } from '../lib/api'
 
 // ── Supply-chain node definitions (lat/lng for real map placement) ──
 const NODES = [
@@ -75,7 +75,7 @@ export default function NetworkRippleGraph() {
     setNodeRiskMap({})
     setRippleResult(null)
 
-    const data = await fetchRipple(node.shipmentId)
+    const data = await triggerRipple(node.shipmentId, 0.78)
     setRippleLoading(false)
     if (!data) {
       // Graceful offline fallback: simulate proportional ripple from click node
