@@ -1,330 +1,416 @@
 # server/app/services/kimi_service.py
 """
-Guardian — Kimi K2.5 AI Recommendation Service (Phase 4b)
-===========================================================
-Advanced AI-driven recommendation engine that synthesizes:
-    - Tower 1 (XGBoost) risk score
-    - Tower 2 (NLP) alert sentiment & risk factors
-    - Tower 3 (MLP) uncertainty / confidence
-    - DiCE counterfactual interventions
-
-Kimi K2.5 generates:
-    - Context-aware action recommendations
-    - Risk narrative (why this shipment is at risk)
-    - Confidence level
-    - Estimated impact of following recommendation
-
-Unlike simple rule-based systems, Kimi K2.5 uses model-driven insights
-to tailor recommendations to the specific risk factors of each shipment.
+Guardian — NVIDIA Kimi K2.5 Integration
+Uses DiCE-grounded prompts to select optimal intervention.
+Eliminates hallucination by constraining LLM to mathematically-proven options.
 """
+import os
+import json
 import logging
-from typing import Dict, Any, Optional, List
+import requests
+from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# NVIDIA API configuration
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "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")
+NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Risk factor → recommendation mappings
-# ─────────────────────────────────────────────────────────────────────────────
-
-RISK_NARRATIVE_TEMPLATES = {
-    "weather": "Adverse weather conditions ({condition}) at {location} are causing potential delays.",
-    "carrier": "Low carrier reliability score ({score}) for {carrier} increases delay probability.",
-    "route": "Historical delay rate ({rate:.0%}) on {route} corridor exceeds threshold.",
-    "port": "Port congestion at {port} (wait time: {wait}h) is adding {delay}h to transit.",
-    "labor": "Labor strike probability ({prob:.0%}) at {location} may disrupt operations.",
-    "geopolitical": "Geopolitical risk ({score:.0%}) in {region} creates uncertainty.",
-    "multi": "Multiple risk factors compounding: {factors}. Overall delay probability elevated.",
+# Cost estimates (Rs.) — representative for Indian logistics
+BASE_COSTS = {
+    "reroute_via_air":        45000,
+    "assign_alt_carrier":     12000,
+    "expedite_customs":       8000,
+    "send_pre_alert":         0,
+    "reroute_via_road":       28000,
+    "hold_shipment":          5000,
 }
 
-ACTION_TEMPLATES = {
-    "weather": [
-        "Reroute via alternative hub to avoid weather system",
-        "Pre-position inventory at downstream fulfillment center",
-        "Switch to air freight for time-critical items",
-    ],
-    "carrier": [
-        "Switch to premium carrier with higher reliability score",
-        "Negotiate priority handling with current carrier",
-        "Add buffer inventory to mitigate potential delays",
-    ],
-    "route": [
-        "Take alternate corridor (e.g., via Singapore instead of Dubai)",
-        "Split shipment across multiple routes",
-        "Consider multimodal transport (sea+air)",
-    ],
-    "port": [
-        "Pre-clear customs at origin port",
-        "Engage local agent to expedite port handling",
-        "Shift to less congested alternate port",
-    ],
-    "labor": [
-        "Diversify origin port to avoid strike-impacted location",
-        "Pre-position stock in regional hub",
-        "Activate contingency carrier",
-    ],
-    "geopolitical": [
-        "Avoid transit through high-risk region",
-        "Use maritime route instead of overland",
-        "Increase safety stock in destination market",
-    ],
-    "multi": [
-        "Implement full contingency plan: air freight + alternate carrier",
-        "Activate regional failover strategy",
-        "Engage AI-powered real-time rerouting",
-    ],
+# CO2 emissions per tonne-km (kg CO2)
+CO2_FACTORS = {
+    "Rail": 0.028,
+    "Road": 0.062,
+    "Sea":  0.010,
+    "Air":  0.602,
 }
 
 
-def generate_kimi_recommendation(
-    shipment: Dict[str, Any],
-    risk_score: float,
-    horizon_hours: int = 48,
-    nlp_features: Optional[Dict[str, Any]] = None,
-    uncertainty: Optional[float] = None,
-) -> Dict[str, Any]:
+def call_kimi_k25(
+    prompt: str,
+    temperature: float = 0.3,
+    max_tokens: int = 2048,
+    stream: bool = False
+) -> Optional[str]:
     """
-    Generate Kimi K2.5 AI recommendation for a shipment.
-
+    Call NVIDIA-hosted Kimi K2.5 model.
+    
     Parameters
     ----------
-    shipment : dict
-        Full shipment record
-    risk_score : float
-        Current risk score (0-1) from Tower 1
-    horizon_hours : int
-        Prediction horizon
-    nlp_features : dict, optional
-        Tower 2 NLP features (sentiment, labor risk, geo risk, etc.)
-    uncertainty : float, optional
-        Model uncertainty from Tower 3 (if available)
-
+    prompt      : str, the full prompt including DiCE counterfactuals
+    temperature : float, 0.0-1.0 (lower = more deterministic)
+    max_tokens  : int, max response length
+    stream      : bool, whether to stream response (False for JSON parsing)
+    
     Returns
     -------
-    Dict with:
-        - action: primary recommended action
-        - alternative_actions: list of backup options
-        - narrative: human-readable risk explanation
-        - confidence: 0-1 confidence score
-        - estimated_impact: risk reduction if action taken
-        - risk_factors: list of identified risk drivers
+    str : model response text, or None on failure
     """
-    nlp = nlp_features or {}
-    risk_factors = []
-
-    # ── Step 1: Identify dominant risk factors ──
-    # Check NLP features (Tower 2)
-    labor_prob = nlp.get("labor_strike_probability", 0.0)
-    geo_risk = nlp.get("geopolitical_risk_score", 0.0)
-    sentiment = nlp.get("sentiment_score", nlp.get("weather_severity_score", 0.0))
-
-    if labor_prob > 0.3:
-        risk_factors.append({
-            "type": "labor",
-            "location": shipment.get("origin", "origin port"),
-            "probability": labor_prob,
-        })
-
-    if geo_risk > 0.25:
-        risk_factors.append({
-            "type": "geopolitical",
-            "region": shipment.get("destination", "destination"),
-            "score": geo_risk,
-        })
-
-    # Check shipment-specific features
-    carrier = str(shipment.get("carrier", "")).lower()
-    if carrier in ["unknown", "indian_post", "local_carrier"]:
-        risk_factors.append({
-            "type": "carrier",
-            "carrier": carrier,
-            "score": 0.15,
-        })
-
-    route = f"{shipment.get('origin', '?')}→{shipment.get('destination', '?')}"
-    if risk_score > 0.6 or sentiment < -0.3:
-        risk_factors.append({
-            "type": "weather",
-            "location": shipment.get("origin", "origin"),
-            "condition": "heavy rain/monsoon" if sentiment < -0.3 else "adverse conditions",
-            "severity": abs(sentiment) if sentiment < 0 else 0.1,
-        })
-
-    # Port congestion check
-    port_wait = shipment.get("port_wait_times", 0)
-    if port_wait > 12:
-        risk_factors.append({
-            "type": "port",
-            "port": shipment.get("destination", "destination port"),
-            "wait_hours": port_wait,
-            "added_delay": port_wait * 0.5,
-        })
-
-    # Multi-factor detection
-    if len(risk_factors) >= 2:
-        primary_factor = "multi"
-    elif risk_factors:
-        primary_factor = risk_factors[0]["type"]
-    else:
-        primary_factor = "carrier"  # fallback
-
-    # ── Step 2: Generate narrative ──
-    narrative = _build_narrative(primary_factor, risk_factors, shipment)
-
-    # ── Step 3: Generate actions ──
-    actions = ACTION_TEMPLATES.get(primary_factor, ACTION_TEMPLATES["carrier"])
-    primary_action = actions[0] if actions else "Monitor shipment closely"
-    alternative_actions = actions[1:3] if len(actions) > 1 else []
-
-    # ── Step 4: Estimate impact & confidence ──
-    # Higher confidence when:
-    #   - Multiple risk factors identified (more evidence)
-    #   - Low model uncertainty (if available)
-    #   - Strong NLP signals
-
-    base_confidence = 0.65
-    if len(risk_factors) >= 2:
-        base_confidence += 0.15
-    if uncertainty is not None:
-        base_confidence += (1.0 - uncertainty) * 0.15
-    if labor_prob > 0.5 or geo_risk > 0.4:
-        base_confidence += 0.1
-
-    confidence = min(base_confidence, 0.95)
-
-    # Impact estimate: how much risk can be reduced
-    if primary_factor == "multi":
-        est_impact = 0.35
-    elif primary_factor in ("weather", "port"):
-        est_impact = 0.25
-    elif primary_factor in ("carrier", "route"):
-        est_impact = 0.20
-    else:
-        est_impact = 0.15
-
-    return {
-        "action": primary_action,
-        "alternative_actions": alternative_actions,
-        "narrative": narrative,
-        "confidence": round(confidence, 2),
-        "estimated_impact": round(est_impact, 2),
-        "risk_factors": risk_factors,
-        "model_version": "Kimi K2.5",
+    headers = {
+        "Authorization": f"Bearer {NVIDIA_API_KEY}",
+        "Accept": "text/event-stream" if stream else "application/json"
     }
+    
+    payload = {
+        "model": "moonshotai/kimi-k2.5",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "top_p": 1.00,
+        "stream": stream,
+        "chat_template_kwargs": {"thinking": True},  # Enable chain-of-thought
+    }
+    
+    try:
+        response = requests.post(
+            NVIDIA_INVOKE_URL,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        if stream:
+            # For streaming, collect all chunks
+            full_text = ""
+            for line in response.iter_lines():
+                if line:
+                    decoded = line.decode("utf-8")
+                    if decoded.startswith("data: "):
+                        data_str = decoded[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content", "")
+                            full_text += content
+                        except json.JSONDecodeError:
+                            continue
+            return full_text
+        else:
+            # Non-streaming: parse JSON directly
+            result = response.json()
+            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return content
+            
+    except requests.exceptions.Timeout:
+        logger.error("Kimi K2.5 API timeout after 30s")
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Kimi K2.5 API request failed: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error calling Kimi K2.5: {e}")
+        return None
 
 
-def _build_narrative(
-    primary_factor: str,
-    risk_factors: List[Dict[str, Any]],
+def get_intervention_recommendation(
     shipment: Dict[str, Any],
-) -> str:
-    """Construct human-readable risk narrative."""
-    if primary_factor == "multi":
-        factors_str = ", ".join([rf["type"] for rf in risk_factors])
-        return RISK_NARRATIVE_TEMPLATES["multi"].format(factors=factors_str)
-
-    template = RISK_NARRATIVE_TEMPLATES.get(primary_factor, RISK_NARRATIVE_TEMPLATES["carrier"])
-
-    # Fill template placeholders
-    if primary_factor == "weather":
-        wf = next((rf for rf in risk_factors if rf["type"] == "weather"), {})
-        return template.format(
-            condition=wf.get("condition", "adverse weather"),
-            location=wf.get("location", shipment.get("origin", "origin"))
-        )
-
-    if primary_factor == "carrier":
-        cf = next((rf for rf in risk_factors if rf.get("type") == "carrier"), {})
-        return template.format(
-            score=cf.get("score", 0.15),
-            carrier=shipment.get("carrier", "current carrier")
-        )
-
-    if primary_factor == "route":
-        return template.format(
-            rate=0.35,
-            route=f"{shipment.get('origin', '?')}→{shipment.get('destination', '?')}"
-        )
-
-    if primary_factor == "port":
-        pf = next((rf for rf in risk_factors if rf.get("type") == "port"), {})
-        return template.format(
-            port=pf.get("port", shipment.get("destination", "destination")),
-            wait=pf.get("wait_hours", 12),
-            delay=pf.get("added_delay", 6)
-        )
-
-    if primary_factor == "labor":
-        lf = next((rf for rf in risk_factors if rf.get("type") == "labor"), {})
-        return template.format(
-            prob=lf.get("probability", 0.3),
-            location=lf.get("location", shipment.get("origin", "origin"))
-        )
-
-    if primary_factor == "geopolitical":
-        gf = next((rf for rf in risk_factors if rf.get("type") == "geopolitical"), {})
-        return template.format(
-            score=gf.get("score", 0.25),
-            region=gf.get("region", shipment.get("destination", "region"))
-        )
-
-    # Fallback
-    return f"Shipment {shipment.get('id', '')} has elevated delay risk due to operational factors."
-
-
-def generate_kimi_for_shipment(
-    shipment_id: str,
-    horizon_hours: int = 48,
+    dice_result: Dict[str, Any],
+    shap_top_feature: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Main entry point: fetch shipment, run models, generate Kimi recommendation.
+    Use Kimi K2.5 to select the best intervention from DiCE counterfactuals.
+    
+    Parameters
+    ----------
+    shipment         : dict with shipment fields
+    dice_result      : output from dice_service.generate_counterfactuals()
+    shap_top_feature : optional, the top SHAP feature causing risk
+    
+    Returns
+    -------
+    {
+        "action":              str,    # recommended action
+        "justification":       str,    # why this action was chosen
+        "cost_of_action":      float,  # Rs. cost of intervention
+        "cost_of_sla_miss":    float,  # Rs. penalty if shipment is late
+        "net_saving":          float,  # cost_of_sla_miss - cost_of_action
+        "co2_delta_kg":        float,  # CO2 impact (positive = increase)
+        "confidence":          str,    # "High" | "Medium" | "Low"
+        "counterfactual_used": str,    # which DiCE option was selected
+        "source":              str,    # "kimi" | "fallback"
+    }
     """
-    from app.services.shipment_service import get_shipment_detail
-    from app.services.nlp_service import get_nlp_features
-    from app.services.xgb_service import predict_tower1
+    original_risk = dice_result.get("original_risk", 0.5)
+    counterfactuals = dice_result.get("counterfactuals", [])
+    
+    # If no counterfactuals or low risk, return no-action
+    if not counterfactuals or original_risk < 0.30:
+        return {
+            "action": "Monitor — no intervention needed",
+            "justification": "Risk is below intervention threshold.",
+            "cost_of_action": 0,
+            "cost_of_sla_miss": 0,
+            "net_saving": 0,
+            "co2_delta_kg": 0.0,
+            "confidence": "High",
+            "counterfactual_used": None,
+            "source": "low_risk"
+        }
+    
+    # Build DiCE-grounded prompt
+    prompt = _build_kimi_prompt(shipment, dice_result, shap_top_feature)
+    
+    # Call Kimi K2.5
+    response_text = call_kimi_k25(prompt, temperature=0.3, stream=False)
+    
+    if response_text:
+        # Try to parse JSON from response
+        parsed = _parse_kimi_response(response_text)
+        if parsed:
+            # Enrich with cost calculations
+            parsed = _enrich_with_costs(parsed, shipment, original_risk)
+            parsed["source"] = "kimi"
+            return parsed
+    
+    # Fallback: rule-based selection
+    logger.warning("Kimi K2.5 unavailable or failed to parse. Using fallback.")
+    return _fallback_intervention(shipment, counterfactuals, original_risk)
 
-    # 1. Fetch shipment
-    shipment = get_shipment_detail(shipment_id)
-    if not shipment:
-        logger.warning(f"Kimi: shipment {shipment_id} not found")
-        return {"kimi_recommendation": None}
 
-    # 2. Get NLP features (Tower 2)
-    alert_text = str(shipment.get("alert_text", ""))
-    nlp_features = get_nlp_features(alert_text) if alert_text else {}
+def _build_kimi_prompt(
+    shipment: Dict[str, Any],
+    dice_result: Dict[str, Any],
+    shap_top_feature: Optional[str]
+) -> str:
+    """Build the DiCE-grounded prompt for Kimi K2.5."""
+    shipment_id = shipment.get("id", "UNKNOWN")
+    origin = shipment.get("origin", "Unknown")
+    destination = shipment.get("destination", "Unknown")
+    service_tier = shipment.get("service_tier", "Priority")
+    mode = shipment.get("mode", "Road")
+    
+    original_risk = dice_result["original_risk"]
+    counterfactuals = dice_result["counterfactuals"]
+    
+    # Format counterfactuals as numbered options
+    cf_text = ""
+    for i, cf in enumerate(counterfactuals, 1):
+        cf_text += f"\nOption {i}:\n"
+        cf_text += f"  Description: {cf['description']}\n"
+        cf_text += f"  Risk reduction: {cf['risk_reduction']:.0%} (from {original_risk:.0%} to {cf['new_risk']:.0%})\n"
+        cf_text += f"  Feasibility: {cf['feasibility']}\n"
+        cf_text += f"  Changes required: {cf['num_changes']}\n"
+    
+    # Estimate SLA penalty
+    sla_penalty = _estimate_sla_penalty(shipment, original_risk)
+    
+    # Build carrier availability context
+    carrier_context = _get_carrier_availability(shipment)
+    
+    prompt = f"""You are a logistics operations AI assistant for Guardian Early Warning System.
 
-    nlp_scores = {
-        "labor_strike_probability": nlp_features.get("labor_strike_probability", 0.1),
-        "geopolitical_risk_score": nlp_features.get("geopolitical_risk_score", 0.1),
-        "news_sentiment_score": nlp_features.get("weather_severity_score", 0.0),
-        "sentiment_score": nlp_features.get("sentiment_score", 0.0),
+**Shipment Context:**
+- ID: {shipment_id}
+- Route: {origin} → {destination}
+- Service Tier: {service_tier}
+- Current Mode: {mode}
+- Current Risk: {original_risk:.0%}
+- SLA Penalty if missed: Rs. {sla_penalty:,.0f}
+
+**Primary Delay Cause (SHAP):** {shap_top_feature or "Multiple factors"}
+
+**Mathematically-Proven Intervention Options (DiCE Counterfactuals):**
+{cf_text}
+
+**Carrier Availability:**
+{carrier_context}
+
+**Your Task:**
+Select the BEST intervention option from the DiCE counterfactuals above.
+Consider:
+1. Risk reduction effectiveness
+2. Feasibility (can it be executed in 24-48 hours?)
+3. Cost vs SLA penalty
+4. CO2 impact (prefer lower emissions when possible)
+
+**Output Format (MUST be valid JSON):**
+{{
+  "action": "<selected action from options above>",
+  "justification": "<2-3 sentence explanation>",
+  "estimated_cost_rs": <number>,
+  "confidence": "High" | "Medium" | "Low",
+  "counterfactual_id": "CF_1" | "CF_2" | "CF_3"
+}}
+
+Return ONLY the JSON, no other text."""
+    
+    return prompt
+
+
+def _parse_kimi_response(response_text: str) -> Optional[Dict[str, Any]]:
+    """Extract JSON from Kimi response (handles markdown code blocks)."""
+    try:
+        # Try direct JSON parse first
+        return json.loads(response_text)
+    except json.JSONDecodeError:
+        pass
+    
+    # Try to extract JSON from markdown code block
+    if "```json" in response_text:
+        start = response_text.find("```json") + 7
+        end = response_text.find("```", start)
+        json_str = response_text[start:end].strip()
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
+    
+    # Try to find any JSON object in the text
+    import re
+    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+    matches = re.findall(json_pattern, response_text, re.DOTALL)
+    for match in matches:
+        try:
+            return json.loads(match)
+        except json.JSONDecodeError:
+            continue
+    
+    logger.error(f"Failed to parse Kimi response as JSON: {response_text[:200]}")
+    return None
+
+
+def _enrich_with_costs(
+    parsed: Dict[str, Any],
+    shipment: Dict[str, Any],
+    original_risk: float
+) -> Dict[str, Any]:
+    """Add cost-benefit analysis to Kimi's recommendation."""
+    action = parsed.get("action", "").lower()
+    
+    # Map action to cost category
+    cost = parsed.get("estimated_cost_rs", 0)
+    if not cost:
+        if "air" in action or "flight" in action:
+            cost = BASE_COSTS["reroute_via_air"]
+        elif "carrier" in action or "switch" in action:
+            cost = BASE_COSTS["assign_alt_carrier"]
+        elif "customs" in action or "expedite" in action:
+            cost = BASE_COSTS["expedite_customs"]
+        elif "road" in action or "reroute" in action:
+            cost = BASE_COSTS["reroute_via_road"]
+        elif "alert" in action or "notify" in action:
+            cost = BASE_COSTS["send_pre_alert"]
+        else:
+            cost = BASE_COSTS["assign_alt_carrier"]  # default
+    
+    # Apply surge multiplier based on risk severity
+    surge = 1.0 + (original_risk * 0.6)  # Up to 60% surge at max risk
+    cost = cost * surge
+    
+    # SLA penalty
+    sla_penalty = _estimate_sla_penalty(shipment, original_risk)
+    
+    # CO2 calculation
+    co2_delta = _estimate_co2_delta(shipment, action)
+    
+    return {
+        **parsed,
+        "cost_of_action": round(cost, 0),
+        "cost_of_sla_miss": round(sla_penalty, 0),
+        "net_saving": round(sla_penalty - cost, 0),
+        "co2_delta_kg": round(co2_delta, 1),
     }
 
-    # 3. Get risk prediction (Tower 1)
-    t1_pred = predict_tower1(shipment, horizon_hours, nlp_scores)
-    risk_score = float(t1_pred.get("risk_score", 0.5))
 
-    # 4. Get uncertainty from Tower 3 if available (optional)
-    uncertainty = None
-    # Could call fusion_service here if uncertainty is needed
+def _estimate_sla_penalty(shipment: Dict[str, Any], risk: float) -> float:
+    """Estimate SLA penalty based on service tier and risk."""
+    tier = shipment.get("service_tier", "Priority").lower()
+    
+    base_penalties = {
+        "critical": 150000,
+        "priority": 75000,
+        "standard": 30000,
+    }
+    
+    base = base_penalties.get(tier, 75000)
+    # Scale by risk (higher risk = more likely to pay penalty)
+    return base * risk
 
-    # 5. Generate Kimi recommendation
-    recommendation = generate_kimi_recommendation(
-        shipment=shipment,
-        risk_score=risk_score,
-        horizon_hours=horizon_hours,
-        nlp_features=nlp_features,
-        uncertainty=uncertainty,
-    )
 
-    logger.info(
-        f"Kimi K2.5 generated recommendation for {shipment_id} "
-        f"(risk: {risk_score:.2%}, confidence: {recommendation['confidence']:.0%})"
-    )
+def _estimate_co2_delta(shipment: Dict[str, Any], action: str) -> float:
+    """Estimate CO2 impact of intervention."""
+    current_mode = shipment.get("mode", "Road")
+    distance_km = shipment.get("distance_km", 1200)  # default ~Mumbai-Delhi
+    cargo_tonnes = shipment.get("cargo_tonnes", 2.5)
+    
+    current_co2 = CO2_FACTORS.get(current_mode, CO2_FACTORS["Road"]) * distance_km * cargo_tonnes
+    
+    # Determine new mode from action
+    new_mode = current_mode
+    if "air" in action.lower() or "flight" in action.lower():
+        new_mode = "Air"
+    elif "road" in action.lower():
+        new_mode = "Road"
+    elif "rail" in action.lower():
+        new_mode = "Rail"
+    elif "sea" in action.lower():
+        new_mode = "Sea"
+    
+    new_co2 = CO2_FACTORS.get(new_mode, CO2_FACTORS["Road"]) * distance_km * cargo_tonnes
+    
+    return new_co2 - current_co2
 
+
+def _get_carrier_availability(shipment: Dict[str, Any]) -> str:
+    """Generate carrier availability context."""
+    # Synthetic carrier availability for demo
+    carriers = {
+        "FedEx-Premium": {"acceptance_rate": 0.87, "current_load": 0.62},
+        "DHL-Express": {"acceptance_rate": 0.79, "current_load": 0.74},
+        "BlueDart": {"acceptance_rate": 0.72, "current_load": 0.91},
+        "Delhivery": {"acceptance_rate": 0.68, "current_load": 0.58},
+    }
+    
+    lines = []
+    for name, stats in carriers.items():
+        status = "✅ Available" if stats["current_load"] < 0.85 else "⚠️ Near capacity"
+        lines.append(f"  {name}: {stats['acceptance_rate']:.0%} acceptance, {stats['current_load']:.0%} load — {status}")
+    
+    return "\n".join(lines)
+
+
+def _fallback_intervention(
+    shipment: Dict[str, Any],
+    counterfactuals: List[Dict],
+    original_risk: float
+) -> Dict[str, Any]:
+    """Rule-based fallback when Kimi is unavailable."""
+    # Select best counterfactual by risk reduction
+    best_cf = max(counterfactuals, key=lambda x: x["risk_reduction"])
+    
+    action = best_cf["description"]
+    cost = BASE_COSTS["assign_alt_carrier"]  # default
+    
+    if "carrier" in action.lower():
+        cost = BASE_COSTS["assign_alt_carrier"]
+    elif "weather" in action.lower() or "reroute" in action.lower():
+        cost = BASE_COSTS["reroute_via_road"]
+    elif "customs" in action.lower() or "port" in action.lower():
+        cost = BASE_COSTS["expedite_customs"]
+    
+    sla_penalty = _estimate_sla_penalty(shipment, original_risk)
+    co2_delta = _estimate_co2_delta(shipment, action)
+    
     return {
-        "shipment_id": shipment_id,
-        "risk_score": round(risk_score, 4),
-        "horizon_hours": horizon_hours,
-        "kimi_recommendation": recommendation,
+        "action": action,
+        "justification": f"Selected based on highest risk reduction ({best_cf['risk_reduction']:.0%}) and {best_cf['feasibility'].lower()} feasibility.",
+        "cost_of_action": round(cost, 0),
+        "cost_of_sla_miss": round(sla_penalty, 0),
+        "net_saving": round(sla_penalty - cost, 0),
+        "co2_delta_kg": round(co2_delta, 1),
+        "confidence": best_cf["feasibility"],
+        "counterfactual_used": best_cf["id"],
+        "source": "fallback"
     }

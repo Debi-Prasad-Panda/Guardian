@@ -5,6 +5,7 @@ Guardian ML Router — Three-Tower inference endpoints.
 Endpoints:
   POST /api/ml/predict              Tower 3 direct (raw 885-dim vector)
   POST /api/ml/predict-shipment     Full pipeline (shipment_id → T2→T1→T3)
+  POST /api/ml/intervention         DiCE + Kimi K2.5 intervention recommendation
   GET  /api/ml/health               Tower 3 readiness check
   GET  /api/ml/tower1/health        Tower 1 readiness check
 """
@@ -12,6 +13,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ml", tags=["ML"])
 
@@ -166,3 +170,114 @@ async def tower1_health():
         }
     except Exception as e:
         return {"status": "unavailable", "reason": str(e)}
+
+
+class InterventionRequest(BaseModel):
+    """Request for intervention recommendation."""
+    shipment_id:        Optional[str] = None
+    # Shipment fields (used when shipment_id is None)
+    alert_text:         str   = "No alerts."
+    mode:               str   = "Road"
+    service_tier:       str   = "Priority"
+    carrier:            str   = "unknown"
+    origin:             str   = "India"
+    destination:        str   = "India"
+    days_scheduled:     float = 7.0
+    prediction_horizon: int   = 48
+    num_counterfactuals: int  = 3
+
+
+@router.post("/intervention")
+async def get_intervention(req: InterventionRequest) -> Dict[str, Any]:
+    """
+    Full DiCE + Kimi K2.5 intervention pipeline.
+    
+    Pipeline:
+        1. Run full three-tower prediction
+        2. Generate DiCE counterfactuals (what-if scenarios)
+        3. Call Kimi K2.5 to select best intervention
+        4. Return intervention card with cost-benefit analysis
+    
+    This is the INNOVATION SHOWCASE endpoint — combines:
+        - Tower 1 XGBoost (tabular risk)
+        - Tower 2 MiniLM (NLP risk)
+        - Tower 3 MLP (fusion + uncertainty)
+        - DiCE (counterfactual explanations)
+        - Kimi K2.5 (grounded LLM recommendation)
+    """
+    from app.services.fusion_service import predict_full_pipeline
+    from app.services.dice_service import generate_counterfactuals
+    from app.services.kimi_service import get_intervention_recommendation
+    from app.database import get_db
+    
+    # Build shipment dict
+    shipment_dict: Dict[str, Any] = {
+        "alert_text":     req.alert_text,
+        "mode":           req.mode,
+        "service_tier":   req.service_tier,
+        "carrier":        req.carrier,
+        "origin":         req.origin,
+        "destination":    req.destination,
+        "days_scheduled": req.days_scheduled,
+    }
+    
+    # Fetch from DB if shipment_id provided
+    if req.shipment_id:
+        try:
+            db = get_db()
+            doc = await db.shipments.find_one(
+                {"id": req.shipment_id}, {"_id": 0}
+            )
+            if doc:
+                shipment_dict = {**doc, **{
+                    k: v for k, v in shipment_dict.items()
+                    if k in doc
+                }}
+                if req.alert_text != "No alerts.":
+                    shipment_dict["alert_text"] = req.alert_text
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Shipment {req.shipment_id} not found."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"DB error: {e}")
+    
+    try:
+        # Step 1: Full three-tower prediction
+        prediction = predict_full_pipeline(shipment_dict, req.prediction_horizon)
+        
+        # Step 2: Generate DiCE counterfactuals
+        dice_result = generate_counterfactuals(
+            shipment_dict,
+            horizon_hours=req.prediction_horizon,
+            num_counterfactuals=req.num_counterfactuals
+        )
+        
+        # Step 3: Get Kimi K2.5 recommendation
+        # TODO: Add SHAP top feature extraction here
+        intervention = get_intervention_recommendation(
+            shipment_dict,
+            dice_result,
+            shap_top_feature="weather_severity_index"  # placeholder
+        )
+        
+        # Step 4: Combine all results
+        return {
+            "shipment_id":    req.shipment_id or "AD_HOC",
+            "prediction":     prediction,
+            "counterfactuals": dice_result,
+            "intervention":   intervention,
+            "timestamp":      "2025-01-28T14:30:00Z",  # TODO: use real timestamp
+        }
+        
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Model not loaded: {e}"
+        )
+    except Exception as e:
+        logger.error(f"Intervention pipeline failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

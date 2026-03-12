@@ -53,18 +53,20 @@ async def get_timeline(shipment_id: str):
 
 
 @router.get("/{shipment_id}/dice")
-async def get_dice(shipment_id: str):
-    """Return DiCE counterfactual interventions for a shipment."""
-    dice_data = await shipment_service.get_shipment_dice(shipment_id)
-    if not dice_data:
-        return {"dice_interventions": []}
-    return dice_data
+async def get_dice(shipment_id: str, horizon: int = 48):
+    """
+    Return DiCE counterfactual interventions for a shipment.
+    Generates real interventions using Tower 1 XGBoost model.
+    """
+    from app.services.dice_service import generate_dice_for_shipment
+    return generate_dice_for_shipment(shipment_id, horizon_hours=horizon)
 
 
 @router.get("/{shipment_id}/kimi")
-async def get_kimi(shipment_id: str):
-    """Return Kimi AI recommendation for a shipment."""
-    kimi_data = await shipment_service.get_shipment_kimi(shipment_id)
-    if not kimi_data:
-        return {"kimi_recommendation": None}
-    return kimi_data
+async def get_kimi(shipment_id: str, horizon: int = 48):
+    """
+    Return Kimi K2.5 AI recommendation for a shipment.
+    Generates AI-driven recommendations using Tower 1 + Tower 2 features.
+    """
+    from app.services.kimi_service import generate_kimi_for_shipment
+    return generate_kimi_for_shipment(shipment_id, horizon_hours=horizon)
