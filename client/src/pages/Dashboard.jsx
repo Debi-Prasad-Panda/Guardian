@@ -2,11 +2,35 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { TrendingUp, Users, ShieldCheck, Plus, Minus, Search, Zap } from 'lucide-react'
 import { fetchDashboardOverview, fetchShipments, createRiskSocket } from '../lib/api'
+import { ResponsiveContainer, LineChart, Line, YAxis } from 'recharts'
 
 export default function Dashboard() {
   const [overview, setOverview] = useState(null)
   const [shipments, setShipments] = useState([])
   const [filter, setFilter] = useState('all')
+
+  // Deterministic "Horizon Sparkline" generator
+  // Creates a trajectory (T+24, T+48, T+72) based on current risk and shipment ID hash
+  const generateForecastData = (shipmentId, currentRisk) => {
+    const hash = shipmentId.split('').reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    const noise1 = ((hash % 10) / 100); // -0.09 to +0.09
+    const noise2 = (((hash >> 2) % 15) / 100); // -0.14 to +0.14
+    const noise3 = (((hash >> 4) % 20) / 100); // -0.19 to +0.19
+
+    // Base trend: Higher risk tends to stay high or rise slightly, lower risk stays low
+    let trend = currentRisk > 0.6 ? 0.05 : -0.02;
+    if (currentRisk > 0.85) trend = 0.02; // Ceiling effect
+
+    return [
+      { time: 'T+0', risk: currentRisk },
+      { time: 'T+24', risk: Math.max(0, Math.min(1, currentRisk + trend + noise1)) },
+      { time: 'T+48', risk: Math.max(0, Math.min(1, currentRisk + (trend * 2) + noise2)) },
+      { time: 'T+72', risk: Math.max(0, Math.min(1, currentRisk + (trend * 3) + noise3)) }
+    ];
+  };
 
   useEffect(() => {
     fetchDashboardOverview().then((d) => d && setOverview(d))
@@ -231,22 +255,48 @@ export default function Dashboard() {
                   const origin = (s.origin ?? '').slice(0, 3).toUpperCase()
                   const dest = (s.destination ?? '').slice(0, 3).toUpperCase()
                   let riskColor = 'text-dash-green'
+                  let strokeColor = '#10b981' // dash-green
                   let statusLabel = 'Stable'
                   let statusClass = 'bg-dash-green/10 text-dash-green'
                   if (risk >= 80) {
                     riskColor = 'text-dash-risk'
+                    strokeColor = '#ef4444' // text-red-500 equivalent for Recharts Line
                     statusLabel = 'Intervene'
                     statusClass = 'bg-dash-accent/20 text-dash-accent border border-dash-accent/30'
                   } else if (risk >= 50) {
                     riskColor = 'text-orange-400'
+                    strokeColor = '#fb923c' // text-orange-400
                     statusLabel = 'Monitoring'
                     statusClass = 'bg-white/10 text-white'
                   }
+                  
+                  const sparklineData = generateForecastData(s.id, s.risk ?? 0);
+
                   return (
                     <tr key={s.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => window.location.href = `/shipments/${s.id}`}>
                       <td className="px-6 py-4 font-medium text-white">{s.id}</td>
                       <td className="px-6 py-4 text-gray-400">{origin} → {dest}</td>
-                      <td className={`px-6 py-4 font-bold ${riskColor}`}>{risk}%</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3 w-full">
+                          <span className={`font-bold ${riskColor} w-10 text-right`}>{risk}%</span>
+                          {/* Sparkline explicitly sized so ResponsiveContainer computes >0 dimensions */}
+                          <div className="h-6 w-24 min-w-[96px] relative">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={sparklineData}>
+                                <YAxis domain={[0, 1]} hide />
+                                <Line 
+                                  type="monotone" 
+                                  dataKey="risk" 
+                                  stroke={strokeColor} 
+                                  strokeWidth={2} 
+                                  dot={false} 
+                                  isAnimationActive={false} 
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass}`}>
                           {statusLabel}

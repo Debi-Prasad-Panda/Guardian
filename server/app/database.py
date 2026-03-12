@@ -26,9 +26,9 @@ async def connect_db():
     # Quick connectivity check
     try:
         await client.admin.command("ping")
-        print(f"✅ Connected to MongoDB: {settings.MONGODB_URI}/{settings.MONGODB_DB}")
+        print(f"OK: Connected to MongoDB: {settings.MONGODB_URI}/{settings.MONGODB_DB}")
     except Exception as e:
-        print(f"⚠️  MongoDB connection failed: {e}")
+        print(f"WARN: MongoDB connection failed: {e}")
         print("   Backend will still start — endpoints using DB will return errors.")
 
 
