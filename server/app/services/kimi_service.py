@@ -414,3 +414,41 @@ def _fallback_intervention(
         "counterfactual_used": best_cf["id"],
         "source": "fallback"
     }
+
+
+async def generate_kimi_for_shipment(
+    shipment_id: str,
+    horizon_hours: int = 48
+) -> dict:
+    """
+    Async entry-point called by the shipments router.
+    1. Fetches shipment from MongoDB.
+    2. Generates DiCE counterfactuals (Tower 1 XGBoost).
+    3. Calls Kimi K2.5 to select best intervention (with fallback).
+    Returns a structured intervention recommendation dict.
+    """
+    from app.database import get_db
+    from app.services.dice_service import generate_counterfactuals
+
+    db = get_db()
+    shipment = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+
+    if not shipment:
+        return {
+            "error": f"Shipment {shipment_id} not found",
+            "action": None,
+            "source": "not_found",
+        }
+
+    # Step 1: Get DiCE counterfactuals
+    dice_result = generate_counterfactuals(shipment, horizon_hours=horizon_hours)
+
+    # Step 2: Get SHAP top feature (optional — pull from shipment if present)
+    shap_top_feature = None
+    shap_values = shipment.get("shap_values", [])
+    if shap_values:
+        top = max(shap_values, key=lambda x: abs(x.get("value", 0)))
+        shap_top_feature = top.get("feature")
+
+    # Step 3: Get Kimi recommendation
+    return get_intervention_recommendation(shipment, dice_result, shap_top_feature)

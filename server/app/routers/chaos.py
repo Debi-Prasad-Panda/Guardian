@@ -192,18 +192,19 @@ async def inject_chaos(params: ChaosParams):
     }
 
 
-@router.get("/batch-disruption")
+@router.post("/batch-disruption")
 async def batch_disruption(hub: str, severity: float):
     """
     Batch disruption mode — re-evaluate ALL shipments through affected hub.
     Returns list of affected shipments with updated risks.
     Used by ChaosInjector.jsx for "entire map goes red" effect.
+    Accepts POST so the frontend can pass large payloads in the future.
     """
     db = get_db()
-    
+
     # Fetch all shipments
     shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
-    
+
     # Filter shipments passing through hub
     affected = []
     for s in shipments:
@@ -223,20 +224,117 @@ async def batch_disruption(hub: str, severity: float):
                 new_risk = result["risk_score"]
             except Exception as e:
                 logger.debug(f"XGBoost unavailable for batch disruption: {e}")
-                # Fallback: arithmetic increase
                 new_risk = min(s.get("risk", 0.5) + (severity / 10.0) * 0.4, 0.99)
-            
+
             affected.append({
                 "node_id": s["id"],
                 "hub": s.get("origin", ""),
                 "risk": round(new_risk, 4),
                 "status": "CRITICAL" if new_risk > 0.8 else "HIGH"
             })
-    
+
     return {
         "hub": hub,
         "severity": severity,
         "affected_nodes": affected,
         "total_affected": len(affected),
         "message": f"Batch disruption: {len(affected)} nodes flagged across network."
+    }
+
+
+@router.post("/ripple/{shipment_id}")
+async def ripple_from_shipment(shipment_id: str, base_risk: float = 0.78):
+    """
+    Propagate risk outward from a single shipment through the network graph.
+    Uses PROPAGATION_GRAPH with configurable decay.
+    Returns risk scores for all directly and indirectly connected nodes.
+    """
+    db = get_db()
+
+    # Fetch the source shipment
+    source = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    if not source:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Shipment {shipment_id} not found")
+
+    # Seed propagation with the provided base_risk (or the shipment's own risk)
+    seed_risk = base_risk if base_risk else float(source.get("risk", 0.5))
+    source_risks = {shipment_id: seed_risk}
+
+    # Run propagation
+    propagated = propagate_risk(source_risks, PROPAGATION_GRAPH)
+
+    # Fetch all shipments so we can enrich propagated nodes with metadata
+    all_shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+    shipment_map = {s["id"]: s for s in all_shipments}
+
+    nodes = []
+    for node_id, risk in propagated.items():
+        s = shipment_map.get(node_id, {})
+        nodes.append({
+            "id": node_id,
+            "origin": s.get("origin", "Unknown"),
+            "destination": s.get("destination", "Unknown"),
+            "risk": round(risk, 4),
+            "is_source": node_id == shipment_id,
+            "status": "CRITICAL" if risk > 0.8 else "HIGH" if risk > 0.6 else "ELEVATED",
+        })
+
+    # Sort: source first, then by descending risk
+    nodes.sort(key=lambda x: (not x["is_source"], -x["risk"]))
+
+    return {
+        "source_shipment": shipment_id,
+        "base_risk": round(seed_risk, 4),
+        "propagated_nodes": nodes,
+        "total_nodes_affected": len(nodes),
+        "message": (
+            f"Risk propagated from {shipment_id} (base={seed_risk:.0%}) "
+            f"to {len(nodes) - 1} connected shipments."
+        ),
+    }
+
+
+@router.get("/graph/summary")
+async def graph_summary():
+    """
+    Return a summary of the risk propagation network graph:
+    nodes (shipment IDs), directed edges, and connectivity metrics.
+    Used by the Network Map panel to render the dependency graph.
+    """
+    db = get_db()
+    all_shipments = await db.shipments.find({}, {"_id": 0, "id": 1, "risk": 1, "origin": 1, "destination": 1}).to_list(length=100)
+    shipment_map = {s["id"]: s for s in all_shipments}
+
+    # Build edge list from PROPAGATION_GRAPH
+    edges = []
+    for source, targets in PROPAGATION_GRAPH.items():
+        for target in targets:
+            edges.append({"source": source, "target": target, "decay": 0.7})
+
+    # Build node list — include every node that appears in any edge
+    node_ids = set(PROPAGATION_GRAPH.keys())
+    for targets in PROPAGATION_GRAPH.values():
+        node_ids.update(targets)
+
+    nodes = []
+    for nid in node_ids:
+        s = shipment_map.get(nid, {})
+        nodes.append({
+            "id": nid,
+            "risk": round(float(s.get("risk", 0.5)), 4),
+            "origin": s.get("origin", "Unknown"),
+            "destination": s.get("destination", "Unknown"),
+            "out_degree": len(PROPAGATION_GRAPH.get(nid, [])),
+        })
+
+    nodes.sort(key=lambda x: -x["risk"])
+
+    return {
+        "node_count": len(nodes),
+        "edge_count": len(edges),
+        "nodes": nodes,
+        "edges": edges,
+        "graph": PROPAGATION_GRAPH,
+        "description": "Directed risk propagation graph. Edges carry 0.7 decay factor per hop.",
     }

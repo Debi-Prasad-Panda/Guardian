@@ -59,7 +59,7 @@ async def get_dice(shipment_id: str, horizon: int = 48):
     Generates real interventions using Tower 1 XGBoost model.
     """
     from app.services.dice_service import generate_dice_for_shipment
-    return generate_dice_for_shipment(shipment_id, horizon_hours=horizon)
+    return await generate_dice_for_shipment(shipment_id, horizon_hours=horizon)
 
 
 @router.get("/{shipment_id}/kimi")
@@ -69,4 +69,4 @@ async def get_kimi(shipment_id: str, horizon: int = 48):
     Generates AI-driven recommendations using Tower 1 + Tower 2 features.
     """
     from app.services.kimi_service import generate_kimi_for_shipment
-    return generate_kimi_for_shipment(shipment_id, horizon_hours=horizon)
+    return await generate_kimi_for_shipment(shipment_id, horizon_hours=horizon)

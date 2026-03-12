@@ -351,3 +351,31 @@ def _fallback_counterfactuals(shipment: Dict, horizon_hours: int, original_risk:
         "source": "fallback",
         "message": "Using rule-based counterfactuals (DiCE unavailable)."
     }
+
+
+async def generate_dice_for_shipment(
+    shipment_id: str,
+    horizon_hours: int = 48
+) -> dict:
+    """
+    Async entry-point called by the shipments router.
+    Fetches the shipment document from MongoDB by ID, then delegates to
+    generate_counterfactuals which runs the DiCE / fallback logic.
+    Returns a structured dict identical to generate_counterfactuals output,
+    or an error dict when the shipment cannot be found.
+    """
+    from app.database import get_db
+
+    db = get_db()
+    shipment = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+
+    if not shipment:
+        return {
+            "error": f"Shipment {shipment_id} not found",
+            "original_risk": None,
+            "counterfactuals": [],
+            "actionable_levers": [],
+            "source": "not_found",
+        }
+
+    return generate_counterfactuals(shipment, horizon_hours=horizon_hours)
