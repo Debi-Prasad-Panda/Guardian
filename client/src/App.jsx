@@ -1,46 +1,28 @@
-import { Routes, Route, Navigate } from 'react-router';
-import SiteLayout from './layouts/SiteLayout';
-import WorkspaceLayout from './layouts/WorkspaceLayout';
+import { Routes, Route } from 'react-router'
+import DashboardLayout from './layouts/DashboardLayout'
+import Dashboard from './pages/Dashboard'
+import ShipmentDetail from './pages/ShipmentDetail'
+import ChaosInjector from './pages/ChaosInjector'
+import PortCongestion from './pages/PortCongestion'
+import NetworkRipple from './pages/NetworkRipple'
+import Analytics from './pages/Analytics'
+import Settings from './pages/Settings'
+import ModelCard from './pages/ModelCard'
 
-// Site Pages
-import Home from './pages/site/Home';
-
-// Workspace Pages
-import Overview       from './pages/workspace/Overview';
-import Shipments      from './pages/workspace/Shipments';
-import ShipmentDetail from './pages/workspace/ShipmentDetail';
-import ChaosLab       from './pages/workspace/ChaosLab';
-import RiskMap        from './pages/workspace/RiskMap';
-import Analytics      from './pages/workspace/Analytics';
-import Ports          from './pages/workspace/Ports';
-import Settings       from './pages/workspace/Settings';
-
-function App() {
+export default function App() {
   return (
     <Routes>
-      {/* Landing Site */}
-      <Route path="/" element={<SiteLayout />}>
-        <Route index element={<Home />} />
+      <Route element={<DashboardLayout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="/shipments/:id" element={<ShipmentDetail />} />
+        <Route path="/chaos" element={<ChaosInjector />} />
+        <Route path="/ports" element={<PortCongestion />} />
+        <Route path="/network" element={<NetworkRipple />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/model-card" element={<ModelCard />} />
       </Route>
-
-      {/* Workspace App */}
-      <Route path="/workspace" element={<WorkspaceLayout />}>
-        <Route index element={<Navigate to="/workspace/overview" replace />} />
-        <Route path="overview"           element={<Overview />} />
-        <Route path="map"                element={<RiskMap />} />
-        <Route path="shipments"          element={<Shipments />} />
-        <Route path="shipments/:id"      element={<ShipmentDetail />} />
-        <Route path="chaos-lab"          element={<ChaosLab />} />
-        <Route path="analytics"          element={<Analytics />} />
-        <Route path="ports"              element={<Ports />} />
-        <Route path="settings"           element={<Settings />} />
-      </Route>
-
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
+  )
 }
-
-export default App;
 

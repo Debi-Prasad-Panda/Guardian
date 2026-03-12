@@ -5,6 +5,7 @@ Run: cd server && python -m app.seed
 """
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
+import certifi
 from app.config import settings
 
 

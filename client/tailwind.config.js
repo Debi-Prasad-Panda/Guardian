@@ -7,6 +7,9 @@ export default {
 	],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+			},
 			colors: {
 				border: "var(--border)",
 				input: "var(--input)",
@@ -51,9 +54,14 @@ export default {
 					border: 'var(--sidebar-border)',
 					ring: 'var(--sidebar-ring)',
 				},
-				'risk-safe': "var(--risk-safe)",
-				'risk-warning': "var(--risk-warning)",
-				'risk-critical': "var(--risk-critical)",
+				/* ── Stitch Dashboard Palette ── */
+				'dash-bg': '#0a0b0d',
+				'dash-sidebar': '#0e1116',
+				'dash-card': '#16191f',
+				'dash-border': '#2a2e37',
+				'dash-accent': '#00f2ff',
+				'dash-green': '#10b981',
+				'dash-risk': '#f43f5e',
 			},
 			borderRadius: {
 				lg: "var(--radius)",
@@ -78,5 +86,3 @@ export default {
 	},
 	plugins: [require("tailwindcss-animate")],
 }
-
-

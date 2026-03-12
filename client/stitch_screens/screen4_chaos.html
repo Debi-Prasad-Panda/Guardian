@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Innovate X 5.0 - Chaos Injector</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00E5FF",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#0B0E11",
+                        "glass": "rgba(255, 255, 255, 0.03)",
+                        "glass-border": "rgba(255, 255, 255, 0.08)",
+                        "accent-teal": "#00E5FF",
+                        "risk-red": "#FF4B4B"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-teal {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+        }
+        .glow-red {
+            box-shadow: 0 0 20px rgba(255, 75, 75, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background-dark font-display text-slate-100 antialiased overflow-x-hidden">
+<div class="flex h-screen w-full">
+<!-- Sidebar -->
+<aside class="w-72 flex flex-col border-r border-glass-border bg-background-dark/50 p-6 gap-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-accent-teal text-xl font-black tracking-tighter uppercase italic">Innovate X 5.0</h1>
+<p class="text-slate-500 text-xs font-medium uppercase tracking-widest">Logistics AI System</p>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">package_2</span>
+<span class="text-sm font-medium">Shipment Details</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">anchor</span>
+<span class="text-sm font-medium">Port Intelligence</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-accent-teal/10 text-accent-teal border border-accent-teal/20 transition-colors" href="#">
+<span class="material-symbols-outlined">bolt</span>
+<span class="text-sm font-medium">Chaos Injector</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="text-sm font-medium">Network Ripple Graph</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart_4_bars</span>
+<span class="text-sm font-medium">Analytics</span>
+</a>
+<div class="my-4 border-t border-glass-border"></div>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-glass text-slate-400 transition-colors" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="text-sm font-medium">Model Card</span>
+</a>
+</nav>
+<div class="glassmorphism p-4 rounded-xl flex items-center gap-3 border border-accent-teal/20">
+<div class="h-2 w-2 rounded-full bg-accent-teal animate-pulse"></div>
+<p class="text-[10px] text-slate-300 font-medium uppercase tracking-wider leading-none">Model Calibrated: 1.18M Rows Active</p>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Bar -->
+<header class="h-16 flex items-center justify-between px-8 border-b border-glass-border bg-background-dark/20 backdrop-blur-md">
+<div class="flex-1 max-w-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-accent-teal transition-colors">search</span>
+<input class="w-full bg-glass border-glass-border rounded-lg pl-10 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-accent-teal/50 focus:border-accent-teal/50 outline-none transition-all" placeholder="Search shipments, ports, or alerts..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-glass border border-glass-border text-sm font-medium text-slate-300 hover:text-white hover:border-slate-600 transition-all">
+<span class="material-symbols-outlined text-sm">summarize</span>
+                        Reports
+                    </button>
+<div class="flex items-center gap-3 px-4 py-2 rounded-lg bg-accent-teal/5 border border-accent-teal/10">
+<span class="material-symbols-outlined text-accent-teal text-sm">calendar_today</span>
+<span class="text-sm font-mono text-accent-teal/90">Oct 24, 2023 14:22</span>
+</div>
+<div class="h-8 w-8 rounded-full bg-accent-teal/20 flex items-center justify-center border border-accent-teal/30">
+<span class="material-symbols-outlined text-accent-teal text-base">person</span>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<div class="flex flex-col gap-2">
+<h2 class="text-4xl font-black tracking-tight text-white uppercase italic">Chaos Injector Simulation</h2>
+<p class="text-slate-400 text-base max-w-2xl">Stress-test your global supply chain infrastructure by injecting synthetic disruptions across various parameters.</p>
+</div>
+<div class="grid grid-cols-12 gap-8 h-[calc(100%-120px)]">
+<!-- Left Panel: Controls -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
+<div class="glassmorphism rounded-2xl p-6 flex-1 flex flex-col gap-8">
+<div class="flex items-center gap-2 border-b border-glass-border pb-4">
+<span class="material-symbols-outlined text-accent-teal">tune</span>
+<h3 class="text-lg font-bold text-white uppercase tracking-wider">Disruption Controls</h3>
+</div>
+<div class="space-y-10">
+<!-- Slider: Weather -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium text-slate-300">Weather Severity</label>
+<span class="text-xs font-mono text-accent-teal bg-accent-teal/10 px-2 py-0.5 rounded">0-10 Scale</span>
+</div>
+<div class="relative flex items-center h-6">
+<div class="absolute w-full h-1 bg-slate-800 rounded-full"></div>
+<div class="absolute w-[60%] h-1 bg-accent-teal rounded-full shadow-[0_0_10px_rgba(0,229,255,0.4)]"></div>
+<div class="absolute left-[60%] -translate-x-1/2 w-4 h-4 rounded-full bg-white shadow-xl cursor-pointer"></div>
+<div class="flex justify-between w-full mt-8 text-[10px] font-mono text-slate-600">
+<span>CLEAR</span>
+<span>EXTREME</span>
+</div>
+</div>
+</div>
+<!-- Slider: Port Strike -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium text-slate-300">Port Strike Probability</label>
+<span class="text-xs font-mono text-accent-teal bg-accent-teal/10 px-2 py-0.5 rounded">85%</span>
+</div>
+<div class="relative flex items-center h-6">
+<div class="absolute w-full h-1 bg-slate-800 rounded-full"></div>
+<div class="absolute w-[85%] h-1 bg-accent-teal rounded-full shadow-[0_0_10px_rgba(0,229,255,0.4)]"></div>
+<div class="absolute left-[85%] -translate-x-1/2 w-4 h-4 rounded-full bg-white shadow-xl cursor-pointer"></div>
+<div class="flex justify-between w-full mt-8 text-[10px] font-mono text-slate-600">
+<span>STABLE</span>
+<span>CRITICAL</span>
+</div>
+</div>
+</div>
+<!-- Slider: Congestion -->
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium text-slate-300">Port Congestion Index</label>
+<span class="text-xs font-mono text-accent-teal bg-accent-teal/10 px-2 py-0.5 rounded">4.2</span>
+</div>
+<div class="relative flex items-center h-6">
+<div class="absolute w-full h-1 bg-slate-800 rounded-full"></div>
+<div class="absolute w-[42%] h-1 bg-accent-teal rounded-full shadow-[0_0_10px_rgba(0,229,255,0.4)]"></div>
+<div class="absolute left-[42%] -translate-x-1/2 w-4 h-4 rounded-full bg-white shadow-xl cursor-pointer"></div>
+<div class="flex justify-between w-full mt-8 text-[10px] font-mono text-slate-600">
+<span>OPTIMAL</span>
+<span>GRIDLOCK</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-8">
+<button class="w-full py-5 bg-risk-red text-white font-black text-xl uppercase tracking-[0.2em] italic rounded-xl glow-red hover:bg-risk-red/90 transition-all active:scale-[0.98]">
+                                    Inject Chaos
+                                </button>
+<p class="text-center text-[10px] text-slate-500 mt-4 uppercase tracking-tighter">Warning: Simulation affects all live model prediction streams</p>
+</div>
+</div>
+</div>
+<!-- Right Panel: Impact -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-6">
+<div class="grid grid-cols-2 gap-6">
+<!-- Metric 1 -->
+<div class="glassmorphism rounded-2xl p-6 flex flex-col gap-1 border-l-4 border-l-accent-teal">
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Shipments Affected</p>
+<h4 class="text-4xl font-black text-white font-mono tracking-tighter">1,240</h4>
+<div class="flex items-center gap-1 mt-2 text-risk-red">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-xs font-bold font-mono">+12.5%</span>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="glassmorphism rounded-2xl p-6 flex flex-col gap-1 border-l-4 border-l-risk-red">
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Delta Exposure</p>
+<h4 class="text-4xl font-black text-white font-mono tracking-tighter">+₹2,45,000</h4>
+<p class="text-[10px] text-slate-500 mt-2 uppercase">Projected daily revenue loss</p>
+</div>
+</div>
+<!-- Terminal Log -->
+<div class="glassmorphism rounded-2xl flex-1 flex flex-col overflow-hidden">
+<div class="bg-white/5 px-6 py-3 flex items-center justify-between border-b border-glass-border">
+<div class="flex items-center gap-2">
+<div class="flex gap-1.5 mr-2">
+<div class="w-3 h-3 rounded-full bg-risk-red/40"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-400/40"></div>
+<div class="w-3 h-3 rounded-full bg-accent-teal/40"></div>
+</div>
+<span class="text-xs font-bold text-slate-300 uppercase tracking-widest">Real-time Risk Cascade</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="h-1.5 w-1.5 rounded-full bg-risk-red animate-ping"></div>
+<span class="text-[10px] font-mono text-slate-500">LIVE FEED</span>
+</div>
+</div>
+<div class="p-6 font-mono text-sm leading-relaxed overflow-y-auto space-y-2">
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:22:01]</span>
+<span class="text-risk-red">CRITICAL: Weather alert triggered in South China Sea. Severity level 8/10.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:22:15]</span>
+<span class="text-slate-300">Rerouting initiated for SHP_082. Alternative route: Sunda Strait.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:22:30]</span>
+<span class="text-yellow-400">Predicted delay +14h for Mumbai Port (INBOM).</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:22:45]</span>
+<span class="text-slate-400">Ripple Effect: 4 downstream fulfillment centers flagged for low inventory.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:23:02]</span>
+<span class="text-accent-teal">AI Optimization: Suggested pre-clearance for priority shipments at Port Kelang.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:23:18]</span>
+<span class="text-slate-400">Adjusting throughput capacity for Western Hub by -12%.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">[14:23:35]</span>
+<span class="text-slate-300">Simulation running... 482 alternate paths analyzed.</span>
+</div>
+<div class="animate-pulse">
+<span class="text-accent-teal">_</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

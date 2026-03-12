@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Innovate X 5.0 | Port Congestion Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,FILL@0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00f2ff",
+                        "dashboard-bg": "#0a0b0d",
+                        "dashboard-sidebar": "#0e1116",
+                        "dashboard-card": "#16191f",
+                        "dashboard-border": "#2a2e37",
+                        "dashboard-accent": "#00f2ff",
+                        "dashboard-green": "#10b981",
+                        "dashboard-risk": "#f43f5e"
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .glass-card {
+            background: rgba(22, 25, 31, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .sidebar-item-active {
+            background: linear-gradient(90deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0) 100%);
+            border-left: 2px solid #00f2ff;
+            color: #00f2ff !important;
+        }
+        .glow-teal {
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2a2e37;
+            border-radius: 10px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-dashboard-bg font-display text-gray-300 min-h-screen selection:bg-dashboard-accent selection:text-black">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-dashboard-sidebar border-r border-dashboard-border flex flex-col shrink-0">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg flex items-center justify-center border border-dashboard-accent/30 bg-dashboard-accent/10">
+<span class="material-symbols-outlined text-dashboard-accent !opacity-100 text-xl">emergency_share</span>
+</div>
+<h1 class="text-white font-bold text-lg tracking-tight">Innovate X <span class="text-dashboard-accent text-xs">5.0</span></h1>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-6 overflow-y-auto custom-scrollbar">
+<div>
+<p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-2">Main Menu</p>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors rounded-md group" href="#">
+<span class="material-symbols-outlined text-xl">grid_view</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 sidebar-item-active rounded-r-md group" href="#">
+<span class="material-symbols-outlined text-xl">anchor</span>
+<span class="text-sm font-medium">Port Congestion</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors rounded-md group" href="#">
+<span class="material-symbols-outlined text-xl">analytics</span>
+<span class="text-sm font-medium">Vessel Tracking</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors rounded-md group" href="#">
+<span class="material-symbols-outlined text-xl">warning</span>
+<span class="text-sm font-medium">Risk Assessment</span>
+</a>
+</li>
+</ul>
+</div>
+<div>
+<p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-2">Operations</p>
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors rounded-md group" href="#">
+<span class="material-symbols-outlined text-xl">description</span>
+<span class="text-sm font-medium">Reports</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 transition-colors rounded-md group" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<div class="p-4 border-t border-dashboard-border">
+<div class="glass-card p-4 rounded-xl space-y-2 border border-dashboard-accent/10">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-dashboard-green"></div>
+<p class="text-xs font-semibold text-white">Model Calibrated</p>
+</div>
+<p class="text-[11px] text-gray-400">1.18M Rows Active</p>
+<div class="h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-dashboard-accent/40 w-4/5"></div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden bg-dashboard-bg">
+<!-- Top Bar -->
+<header class="h-16 border-b border-dashboard-border flex items-center justify-between px-8 shrink-0">
+<div class="flex-1 max-w-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+<input class="w-full bg-dashboard-card border-dashboard-border text-sm rounded-full pl-10 focus:ring-1 focus:ring-dashboard-accent focus:border-dashboard-accent transition-all placeholder-gray-600 py-1.5" placeholder="Search ports, vessels or documents..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-9 h-9 flex items-center justify-center rounded-full bg-dashboard-card border border-dashboard-border text-gray-400 hover:text-dashboard-accent transition-colors">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-full bg-dashboard-card border border-dashboard-border text-gray-400 hover:text-dashboard-accent transition-colors">
+<span class="material-symbols-outlined text-xl">tune</span>
+</button>
+<div class="h-6 w-[1px] bg-dashboard-border mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-white leading-none">Admin User</p>
+<p class="text-[10px] text-dashboard-accent mt-1">Logistics Manager</p>
+</div>
+<div class="w-8 h-8 rounded-full border border-dashboard-border flex items-center justify-center text-[10px] font-medium text-white/70 bg-white/5">
+                        AU
+                    </div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-3xl font-black tracking-tight text-white uppercase italic">Port Congestion Dashboard</h1>
+<p class="text-gray-500 mt-1">Real-time maritime bottleneck analysis and demurrage risk forecasting</p>
+</div>
+<div class="flex gap-3">
+<div class="glass-card px-4 py-2 rounded-xl border border-dashboard-accent/10 flex items-center gap-3">
+<div class="p-2 bg-dashboard-accent/10 rounded-lg text-dashboard-accent">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+</div>
+<div>
+<p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Last Refresh</p>
+<p class="text-sm font-bold text-white">2 mins ago</p>
+</div>
+</div>
+<button class="bg-dashboard-accent text-black px-6 py-2 rounded-xl font-bold text-sm shadow-[0_4px_20px_rgba(0,242,255,0.2)] hover:scale-105 transition-transform">
+                        Generate Report
+                    </button>
+</div>
+</div>
+<!-- Key Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-12 h-12 bg-dashboard-accent/5 rounded-bl-full"></div>
+<p class="text-gray-500 text-xs font-bold uppercase tracking-widest">Global Avg Index</p>
+<div class="flex items-baseline gap-2 mt-3">
+<h3 class="text-3xl font-black text-white">6.4<span class="text-sm text-gray-600 font-medium">/10</span></h3>
+<span class="text-xs font-bold text-dashboard-green">+1.2%</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl relative overflow-hidden">
+<p class="text-gray-500 text-xs font-bold uppercase tracking-widest">High Risk Ports</p>
+<div class="flex items-baseline gap-2 mt-3">
+<h3 class="text-3xl font-black text-white">12</h3>
+<span class="text-xs font-bold text-dashboard-accent">+2</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl relative overflow-hidden">
+<p class="text-gray-500 text-xs font-bold uppercase tracking-widest">Avg Wait Time</p>
+<div class="flex items-baseline gap-2 mt-3">
+<h3 class="text-3xl font-black text-white">8.4<span class="text-sm text-gray-600 font-medium">Days</span></h3>
+<span class="text-xs font-bold text-dashboard-risk">-0.5%</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl border-l-2 border-l-dashboard-accent">
+<p class="text-gray-500 text-xs font-bold uppercase tracking-widest">Potential Demurrage</p>
+<div class="flex items-baseline gap-2 mt-3">
+<h3 class="text-3xl font-black text-white">₹2.45M</h3>
+<span class="text-xs font-bold text-dashboard-risk">-2.1%</span>
+</div>
+</div>
+</div>
+<!-- Trends Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Mumbai Trend -->
+<div class="glass-card p-6 rounded-2xl">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h4 class="font-bold text-white">Mumbai Port</h4>
+<p class="text-[10px] text-gray-500 uppercase tracking-wider">30D Congestion Trend</p>
+</div>
+<div class="text-right">
+<p class="text-xl font-black text-dashboard-accent tracking-tight">8.2</p>
+<p class="text-[10px] text-dashboard-green font-bold">+12%</p>
+</div>
+</div>
+<div class="h-24 w-full relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0 35 Q10 32, 20 38 T40 25 T60 30 T80 15 T100 5" fill="none" stroke="#00f2ff" stroke-linecap="round" stroke-width="2.5"></path>
+<path d="M0 35 Q10 32, 20 38 T40 25 T60 30 T80 15 T100 5 V40 H0 Z" fill="url(#gradTeal)" opacity="0.1"></path>
+<defs>
+<lineargradient id="gradTeal" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#00f2ff;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#00f2ff;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- Singapore Trend -->
+<div class="glass-card p-6 rounded-2xl">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h4 class="font-bold text-white">Singapore</h4>
+<p class="text-[10px] text-gray-500 uppercase tracking-wider">30D Congestion Trend</p>
+</div>
+<div class="text-right">
+<p class="text-xl font-black text-gray-400 tracking-tight">4.1</p>
+<p class="text-[10px] text-dashboard-risk font-bold">-4%</p>
+</div>
+</div>
+<div class="h-24 w-full relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0 10 Q20 15, 40 12 T70 20 T100 25" fill="none" stroke="#2a2e37" stroke-linecap="round" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+<!-- Rotterdam Trend -->
+<div class="glass-card p-6 rounded-2xl">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h4 class="font-bold text-white">Rotterdam</h4>
+<p class="text-[10px] text-gray-500 uppercase tracking-wider">30D Congestion Trend</p>
+</div>
+<div class="text-right">
+<p class="text-xl font-black text-gray-400 tracking-tight">5.5</p>
+<p class="text-[10px] text-dashboard-green font-bold">+2%</p>
+</div>
+</div>
+<div class="h-24 w-full relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 40">
+<path d="M0 25 Q25 20, 50 25 T75 15 T100 18" fill="none" stroke="#2a2e37" stroke-linecap="round" stroke-width="2.5"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Port Ranking Table -->
+<div class="glass-card rounded-2xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<h4 class="text-lg font-bold text-white italic uppercase tracking-tight">Global Port Congestion Rankings</h4>
+<div class="flex bg-white/5 p-1 rounded-lg">
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md bg-dashboard-accent text-black">All Ports</button>
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md text-gray-500 hover:text-white transition-colors">High Risk</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-white/5 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+<tr>
+<th class="px-8 py-4">Port Name</th>
+<th class="px-6 py-4">Congestion Index</th>
+<th class="px-6 py-4">Avg Wait Time</th>
+<th class="px-6 py-4">Demurrage Risk Cost</th>
+<th class="px-6 py-4">Health Status</th>
+<th class="px-8 py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5 text-sm">
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[10px] text-gray-400">IN</div>
+<span class="font-bold text-white/90">Mumbai Port</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-black text-dashboard-accent w-8">8.2</span>
+<div class="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-dashboard-accent w-4/5 rounded-full shadow-[0_0_8px_rgba(0,242,255,0.4)]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-gray-400">12 Days</td>
+<td class="px-6 py-5 font-bold text-white/80">₹4,80,000</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full bg-dashboard-risk/5 text-dashboard-risk/80 text-[10px] font-bold border border-dashboard-risk/20 uppercase">Critical</span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="text-dashboard-accent hover:underline text-xs font-bold uppercase tracking-wider">Details</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[10px] text-gray-400">SG</div>
+<span class="font-bold text-white/90">Singapore</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-black text-gray-400 w-8">4.1</span>
+<div class="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-white/20 w-2/5 rounded-full"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-gray-400">3 Days</td>
+<td class="px-6 py-5 font-bold text-white/80">₹1,20,500</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full bg-dashboard-green/5 text-dashboard-green/80 text-[10px] font-bold border border-dashboard-green/20 uppercase">Optimal</span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="text-dashboard-accent hover:underline text-xs font-bold uppercase tracking-wider">Details</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[10px] text-gray-400">NL</div>
+<span class="font-bold text-white/90">Rotterdam</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-black text-gray-400 w-8">5.5</span>
+<div class="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-yellow-500/40 w-3/5 rounded-full"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-gray-400">6 Days</td>
+<td class="px-6 py-5 font-bold text-white/80">₹2,45,000</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full bg-yellow-500/5 text-yellow-500/80 text-[10px] font-bold border border-yellow-500/20 uppercase">Moderate</span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="text-dashboard-accent hover:underline text-xs font-bold uppercase tracking-wider">Details</button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[10px] text-gray-400">US</div>
+<span class="font-bold text-white/90">Los Angeles</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<span class="font-black text-dashboard-accent w-8">7.8</span>
+<div class="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-dashboard-accent w-[78%] rounded-full shadow-[0_0_8px_rgba(0,242,255,0.4)]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 text-gray-400">10 Days</td>
+<td class="px-6 py-5 font-bold text-white/80">₹9,10,000</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded-full bg-dashboard-risk/5 text-dashboard-risk/80 text-[10px] font-bold border border-dashboard-risk/20 uppercase">Critical</span>
+</td>
+<td class="px-8 py-5 text-right">
+<button class="text-dashboard-accent hover:underline text-xs font-bold uppercase tracking-wider">Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-white/5 flex items-center justify-between">
+<p class="text-[11px] text-gray-600 italic ml-4">Auto-refreshing in 42s</p>
+<div class="flex gap-1 mr-4">
+<button class="w-8 h-8 rounded border border-white/10 flex items-center justify-center hover:bg-white/5 text-xs font-bold text-dashboard-accent bg-dashboard-accent/10">1</button>
+<button class="w-8 h-8 rounded border border-white/10 flex items-center justify-center hover:bg-white/5 text-xs text-gray-600">2</button>
+<button class="w-8 h-8 rounded border border-white/10 flex items-center justify-center hover:bg-white/5 text-xs text-gray-600">3</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
