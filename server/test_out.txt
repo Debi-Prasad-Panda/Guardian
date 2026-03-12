@@ -1,0 +1,11 @@
+Testing Guardian APIs...
+[200] Health Check (/api/health)
+  -> Returned Object with keys: ['status', 'database', 'shipments']
+[200] All Shipments (/api/shipments)
+  -> Returned List of 8 items
+[200] All Ports (/api/ports)
+  -> Returned List of 7 items
+[200] Analytics Summary (/api/analytics/summary)
+  -> Returned Object with keys: ['type', 'kpis', 'model_metrics', 'savings_trend', 'carrier_benchmarks']
+[200] Chaos Presets (/api/chaos/presets)
+  -> Returned List of 4 items

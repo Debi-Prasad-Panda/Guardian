@@ -12,6 +12,7 @@ from app.database import connect_db, close_db, get_db
 from app.routers import shipments, chaos, ports, analytics
 from app.routers import settings as settings_router
 from app.routers import ml as ml_router
+from app.routers import external_data
 
 
 # ─── Lifecycle ──────────────────────────────────────────────
@@ -52,6 +53,7 @@ app.include_router(ports.router)
 app.include_router(analytics.router)
 app.include_router(settings_router.router)
 app.include_router(ml_router.router)
+app.include_router(external_data.router)
 
 
 @app.get("/")
