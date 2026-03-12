@@ -190,3 +190,53 @@ async def inject_chaos(params: ChaosParams):
             f"Total network disruption: {len(affected) + len(indirectly_affected)} shipments."
         )
     }
+
+
+@router.get("/batch-disruption")
+async def batch_disruption(hub: str, severity: float):
+    """
+    Batch disruption mode — re-evaluate ALL shipments through affected hub.
+    Returns list of affected shipments with updated risks.
+    Used by ChaosInjector.jsx for "entire map goes red" effect.
+    """
+    db = get_db()
+    
+    # Fetch all shipments
+    shipments = await db.shipments.find({}, {"_id": 0}).to_list(length=100)
+    
+    # Filter shipments passing through hub
+    affected = []
+    for s in shipments:
+        if hub.lower() in s.get("origin", "").lower() or \
+           hub.lower() in s.get("destination", "").lower() or \
+           hub.lower() == "all":
+            # Use XGBoost to compute new risk
+            try:
+                from app.services.xgb_service import predict_tower1
+                enriched = {
+                    **s,
+                    "weather_severity_index": severity * 10.0,
+                    "port_wait_times": severity * 3.0,
+                    "labor_strike_probability": severity / 10.0,
+                }
+                result = predict_tower1(enriched, horizon_hours=48)
+                new_risk = result["risk_score"]
+            except Exception as e:
+                logger.debug(f"XGBoost unavailable for batch disruption: {e}")
+                # Fallback: arithmetic increase
+                new_risk = min(s.get("risk", 0.5) + (severity / 10.0) * 0.4, 0.99)
+            
+            affected.append({
+                "node_id": s["id"],
+                "hub": s.get("origin", ""),
+                "risk": round(new_risk, 4),
+                "status": "CRITICAL" if new_risk > 0.8 else "HIGH"
+            })
+    
+    return {
+        "hub": hub,
+        "severity": severity,
+        "affected_nodes": affected,
+        "total_affected": len(affected),
+        "message": f"Batch disruption: {len(affected)} nodes flagged across network."
+    }

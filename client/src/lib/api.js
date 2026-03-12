@@ -55,5 +55,19 @@ export const fetchNetwork = () => request('/api/shipments/network');
 /** Graph-level summary: shipment count, connection count, high-risk node count */
 export const fetchGraphSummary = () => request('/api/analytics/graph-summary');
 
+// ── ML / Intervention ──
+export const fetchIntervention = (shipmentId, horizonHours = 48) =>
+  request('/api/ml/intervention', {
+    method: 'POST',
+    body: JSON.stringify({
+      shipment_id: shipmentId,
+      prediction_horizon: horizonHours,
+      num_counterfactuals: 3
+    }),
+  });
+
+export const fetchMLHealth = () => request('/api/ml/health');
+export const fetchTower1Health = () => request('/api/ml/tower1/health');
+
 // ── Health ──
 export const checkHealth = () => request('/api/health');
