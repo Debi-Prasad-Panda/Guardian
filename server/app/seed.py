@@ -2,11 +2,19 @@
 Guardian — Database Seeder
 Populates MongoDB with realistic Indian logistics data for demo.
 Run: cd server && python -m app.seed
+
+At seed time, if the three-tower ML pipeline is available, each shipment's
+risk/uncertainty values are computed by the real model rather than using
+hard-coded values.  Falls back silently to the hard-coded values if models
+are not yet loaded.
 """
 import asyncio
+import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 import certifi
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -521,9 +529,43 @@ async def seed():
         await db[collection].drop()
         print(f"   Cleared: {collection}")
 
+    # ── Enrich SHIPMENTS with real ML risk scores (best-effort) ──────────────
+    enriched_shipments = []
+    try:
+        from app.services.fusion_service import predict_full_pipeline
+        print("   🤖 Computing ML risk scores for shipments...")
+        for s in SHIPMENTS:
+            try:
+                ml = predict_full_pipeline(s, horizon_hours=48)
+                enriched = dict(s)
+                enriched["risk"]            = round(ml["risk_score"], 4)
+                enriched["mc_dropout_mean"] = round(ml["risk_score"], 4)
+                enriched["mc_dropout_std"]  = round(ml["uncertainty"], 4)
+                enriched["conformal_lower"] = round(ml["interval_low"], 4)
+                enriched["conformal_upper"] = round(ml["interval_high"], 4)
+                # Update risk_label to match computed score
+                r = ml["risk_score"]
+                if r >= 0.80:
+                    enriched["risk_label"] = "Critical"
+                elif r >= 0.60:
+                    enriched["risk_label"] = "High"
+                elif r >= 0.35:
+                    enriched["risk_label"] = "Medium"
+                else:
+                    enriched["risk_label"] = "Low"
+                enriched_shipments.append(enriched)
+                print(f"      {s['id']}: risk={enriched['risk']} ({enriched['risk_label']})")
+            except Exception as exc:
+                logger.warning("ML enrichment failed for %s: %s — using hardcoded value", s.get("id"), exc)
+                enriched_shipments.append(s)
+        print("   ✅ ML enrichment complete")
+    except Exception as exc:
+        logger.warning("ML pipeline unavailable at seed time: %s — using hardcoded values", exc)
+        enriched_shipments = list(SHIPMENTS)
+
     # Insert shipments
-    await db.shipments.insert_many(SHIPMENTS)
-    print(f"   ✅ Inserted {len(SHIPMENTS)} shipments")
+    await db.shipments.insert_many(enriched_shipments)
+    print(f"   ✅ Inserted {len(enriched_shipments)} shipments")
 
     # Insert shipment details
     if SHIPMENT_DETAILS:

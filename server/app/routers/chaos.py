@@ -1,12 +1,16 @@
 """
 Guardian — Chaos Lab Router
 Chaos injection and risk propagation simulation, using MongoDB shipment data.
+XGBoost (Tower 1) enriches risk deltas when available; falls back to arithmetic.
 """
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from app.database import get_db
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chaos", tags=["chaos"])
 
@@ -75,6 +79,30 @@ async def get_presets():
     return PRESETS
 
 
+def _xgb_enriched_risk(shipment: dict, weather_severity: float,
+                        port_strike: float) -> Optional[float]:
+    """
+    Use Tower 1 XGBoost to compute a more realistic risk score for a chaos event.
+    Returns None (silently) if models are not loaded.
+    """
+    try:
+        from app.services.xgb_service import predict_tower1
+        # Inject chaos parameters as feature overrides
+        enriched = {
+            **shipment,
+            "weather_severity_index":    weather_severity * 10.0,
+            "labor_strike_probability":  port_strike / 10.0,
+            "geopolitical_risk_score":   port_strike / 12.0,
+            "port_wait_times":           port_strike * 3.0,
+            "news_sentiment_score":      -0.5 * (weather_severity / 10.0),
+        }
+        result = predict_tower1(enriched, horizon_hours=48)
+        return result["risk_score"]
+    except Exception as exc:
+        logger.debug("Tower 1 unavailable for chaos enrichment: %s", exc)
+        return None
+
+
 @router.post("/inject")
 async def inject_chaos(params: ChaosParams):
     """Inject a chaos event and compute propagation impact on network."""
@@ -100,10 +128,22 @@ async def inject_chaos(params: ChaosParams):
             is_affected = True
 
         if is_affected:
-            # Compute new risk: base + chaos severity impact
             base_risk: float = float(s.get("risk", 0))
-            delta = severity_normalized * random.uniform(0.3, 0.6)
-            new_risk: float = min(base_risk + delta, 0.99)
+
+            # Try XGBoost-informed risk; fall back to arithmetic
+            t1_risk = _xgb_enriched_risk(
+                s, params.weather_severity, params.port_strike
+            )
+            if t1_risk is not None:
+                # Blend: take the higher of current base vs XGBoost prediction,
+                # then add a small chaos delta for the "event shock"
+                delta    = severity_normalized * random.uniform(0.05, 0.20)
+                new_risk = min(max(base_risk, t1_risk) + delta, 0.99)
+            else:
+                # Arithmetic fallback (original behaviour)
+                delta    = severity_normalized * random.uniform(0.3, 0.6)
+                new_risk = min(base_risk + delta, 0.99)
+
             source_risks[s["id"]] = new_risk
             affected.append({
                 "id": s["id"],

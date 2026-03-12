@@ -13,7 +13,15 @@ db = None
 async def connect_db():
     """Called on FastAPI startup."""
     global client, db
-    client = AsyncIOMotorClient(settings.MONGODB_URI, tlsCAFile=certifi.where())
+    
+    # Adding tls parameters for Python 3.13 + MongoDB Atlas compatibility
+    client = AsyncIOMotorClient(
+        settings.MONGODB_URI, 
+        tlsCAFile=certifi.where(),
+        tls=True,
+        tlsAllowInvalidCertificates=True,
+        serverSelectionTimeoutMS=5000
+    )
     db = client[settings.MONGODB_DB]
     # Quick connectivity check
     try:
