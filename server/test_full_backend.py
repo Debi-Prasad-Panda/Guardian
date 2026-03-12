@@ -10,6 +10,10 @@ import websockets
 import time
 import sys
 
+# Required for loading mapie_calibrated.pkl which was trained with this class
+class XGBWrapper:
+    pass
+
 BASE = "http://localhost:8000"
 RESULTS = []
 
@@ -282,8 +286,8 @@ def test_mapie():
         return {"ok": False, "detail": "mapie_calibrated.pkl not found"}
     with open(path, "rb") as f:
         obj = pickle.load(f)
-    has_calibrated = "calibrated"    in obj
-    has_features   = "feature_cols" in obj
+    has_calibrated = "mapie"         in obj
+    has_features   = "feature_cols"  in obj
     return {
         "ok": has_calibrated and has_features,
         "detail": f"version={obj.get('version', 'unknown')}, "
