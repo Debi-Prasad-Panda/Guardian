@@ -244,68 +244,64 @@ async def get_weather_for_ports() -> Dict[str, Any]:
     Returns temperature, precipitation, wind speed, and weather code.
     """
     weather_data = {}
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            tasks = []
-            for port_name, coords in PORT_COORDS.items():
-                task = client.get(
-                    "https://api.open-meteo.com/v1/forecast",
-                    params={
-                        "latitude": coords["lat"],
-                        "longitude": coords["lng"],
-                        "current": "temperature_2m,precipitation,wind_speed_10m,weather_code",
-                        "timezone": "Asia/Kolkata"
-                    }
-                )
-                tasks.append((port_name, task))
-            
-            # Fetch all in parallel
-            for port_name, task in tasks:
+            port_names = list(PORT_COORDS.keys())
+
+            # Build coroutines inside the async with so the client stays open
+            async def _fetch_one(port_name, coords):
                 try:
-                    response = await task
+                    response = await client.get(
+                        "https://api.open-meteo.com/v1/forecast",
+                        params={
+                            "latitude":  coords["lat"],
+                            "longitude": coords["lng"],
+                            "current":   "temperature_2m,precipitation,wind_speed_10m,weather_code",
+                            "timezone":  "Asia/Kolkata"
+                        }
+                    )
                     response.raise_for_status()
                     data = response.json()
-                    
                     current = data.get("current", {})
-                    
-                    # Calculate weather severity index (0-100)
-                    precip = current.get("precipitation", 0)
-                    wind = current.get("wind_speed_10m", 0)
+
+                    precip       = current.get("precipitation", 0)
+                    wind         = current.get("wind_speed_10m", 0)
                     weather_code = current.get("weather_code", 0)
-                    
-                    # Weather codes: 0=clear, 1-3=partly cloudy, 45-48=fog, 51-99=rain/snow/storm
-                    extreme_flag = 1 if weather_code >= 80 else 0  # Thunderstorm/heavy rain
-                    
+                    extreme_flag = 1 if weather_code >= 80 else 0
                     severity_index = min(precip * 0.4 + wind * 0.3 + extreme_flag * 30, 100.0)
-                    
-                    weather_data[port_name] = {
-                        "temperature_c": current.get("temperature_2m", 25.0),
-                        "precipitation_mm": precip,
-                        "wind_speed_kmh": wind,
-                        "weather_code": weather_code,
+
+                    return port_name, {
+                        "temperature_c":          current.get("temperature_2m", 25.0),
+                        "precipitation_mm":       precip,
+                        "wind_speed_kmh":         wind,
+                        "weather_code":           weather_code,
                         "weather_severity_index": round(severity_index, 1),
-                        "extreme_weather_flag": extreme_flag,
-                        "source": "open_meteo_live",
-                        "timestamp": current.get("time", datetime.now().isoformat())
+                        "extreme_weather_flag":   extreme_flag,
+                        "source":                 "open_meteo_live",
+                        "timestamp":              current.get("time", datetime.now().isoformat())
                     }
-                    
                 except Exception as e:
                     logger.warning(f"Weather fetch failed for {port_name}: {e}")
-                    weather_data[port_name] = {
-                        "weather_severity_index": 5.0,
-                        "source": "fallback"
-                    }
-        
-        logger.info(f"✅ Weather: Fetched data for {len(weather_data)} ports")
+                    return port_name, {"weather_severity_index": 5.0, "source": "fallback"}
+
+            # Gather all requests in parallel (client is still open)
+            results = await asyncio.gather(
+                *[_fetch_one(name, PORT_COORDS[name]) for name in port_names]
+            )
+            for port_name, data in results:
+                weather_data[port_name] = data
+
+        logger.info(f"Weather: Fetched data for {len(weather_data)} ports")
         return weather_data
-        
+
     except Exception as e:
-        logger.error(f"❌ Weather API failed: {e}")
+        logger.error(f"Weather API failed: {e}")
         return {
             port: {"weather_severity_index": 5.0, "source": "error_fallback"}
             for port in PORT_COORDS.keys()
         }
+
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -456,3 +452,9 @@ async def get_live_context() -> Dict[str, Any]:
             "news": "NewsAPI"
         }
     }
+
+
+# ── Backward-compatible aliases ───────────────────────────────────────────────
+# Phase-4 test script and some routers use these shorter names.
+get_portwatch_congestion  = get_portwatch_daily_ports
+get_logistics_news_gdelt  = get_logistics_news
