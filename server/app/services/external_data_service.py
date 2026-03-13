@@ -15,15 +15,22 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── Port Coordinates (Indian ports) ──────────────────────────────────────────
+# ── Port Coordinates (Global & Indian Maritime Ports) ──────────────────────
 PORT_COORDS = {
     "Mumbai JNPT": {"lat": 18.9520, "lng": 72.9481, "code": "INNSA"},
     "Chennai Port": {"lat": 13.0827, "lng": 80.2707, "code": "INMAA"},
     "Kolkata Port": {"lat": 22.5726, "lng": 88.3639, "code": "INCCU"},
-    "Delhi ICD": {"lat": 28.6139, "lng": 77.2090, "code": "INDEL"},
     "Kandla Port": {"lat": 23.0225, "lng": 70.2167, "code": "INKAN"},
     "Visakhapatnam Port": {"lat": 17.6868, "lng": 83.2185, "code": "INVTZ"},
     "Tuticorin Port": {"lat": 8.7642, "lng": 78.1348, "code": "INTUT"},
+    "Singapore": {"lat": 1.2640, "lng": 103.8400, "code": "SGSIN"},
+    "Rotterdam": {"lat": 51.9225, "lng": 4.4791, "code": "NLRTM"},
+    "Dubai Jebel Ali": {"lat": 24.9857, "lng": 55.0273, "code": "AEJEA"},
+    "Colombo": {"lat": 6.9497, "lng": 79.8422, "code": "LKCMB"},
+    "Los Angeles": {"lat": 33.7445, "lng": -118.2690, "code": "USLAX"},
+    "Shanghai": {"lat": 31.3536, "lng": 121.5794, "code": "CNSHA"},
+    "Hamburg": {"lat": 53.5411, "lng": 9.9839, "code": "DEHAM"},
+    "Shenzhen": {"lat": 22.5028, "lng": 113.8824, "code": "CNSNZ"},
 }
 
 # ── PortWatch Port ID Mapping ─────────────────────────────────────────────────
@@ -31,10 +38,17 @@ PORTWATCH_PORT_IDS = {
     "Mumbai JNPT": "INNSA",
     "Chennai Port": "INMAA",
     "Kolkata Port": "INCCU",
-    "Delhi ICD": "INDEL",
     "Kandla Port": "INKAN",
     "Visakhapatnam Port": "INVTZ",
     "Tuticorin Port": "INTUT",
+    "Singapore": "SGSIN",
+    "Rotterdam": "NLRTM",
+    "Dubai Jebel Ali": "AEJEA",
+    "Colombo": "LKCMB",
+    "Los Angeles": "USLAX",
+    "Shanghai": "CNSHA",
+    "Hamburg": "DEHAM",
+    "Shenzhen": "CNSNZ",
 }
 
 
