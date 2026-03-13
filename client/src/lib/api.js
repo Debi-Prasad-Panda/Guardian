@@ -2,7 +2,7 @@
  * Guardian API utility — centralized fetch helpers
  */
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://localhost:5000';
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
@@ -82,7 +82,7 @@ export const fetchWeather = () => request('/api/external/weather');
 
 // ── WebSocket ──
 export const createRiskSocket = (onMessage) => {
-  const ws = new WebSocket('ws://localhost:8000/ws/risk-updates');
+  const ws = new WebSocket('ws://localhost:5000/ws/risk-updates');
   ws.onmessage = (e) => onMessage(JSON.parse(e.data));
   ws.onerror = (e) => console.warn('[WS] error:', e);
   return ws;
